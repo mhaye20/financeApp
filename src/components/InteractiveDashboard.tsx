@@ -438,8 +438,11 @@ const InteractiveDashboard: React.FC = () => {
       y: {
         beginAtZero: false,
         ticks: {
-          callback: function(this: any, value: number) {
-            return `$${value.toLocaleString()}`;
+          callback: function(this: any, tickValue: string | number) {
+            if (typeof tickValue === 'number') {
+              return `$${tickValue.toLocaleString()}`;
+            }
+            return tickValue;
           }
         }
       }
