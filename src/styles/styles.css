@@ -1,0 +1,34 @@
+.app {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+.communication-hub,
+.client-management,
+.interactive-dashboard,
+.educational-resources,
+.analytics,
+.referral-system,
+.customization,
+.compliance,
+.accessibility,
+.ai {
+  margin: 20px;
+  padding: 20px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+.communication-options {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.email-communication,
+.text-communication,
+.phone-communication {
+    border: 1px solid #eee;
+    padding: 10px;
+    border-radius: 5px;
+}
