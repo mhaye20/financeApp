@@ -13,6 +13,10 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   BarChart,
@@ -80,6 +84,8 @@ const mockPredictiveData = [
 
 const Analytics: React.FC = () => {
     const [engagementData, setEngagementData] = useState(initialEngagementData);
+    const [reportType, setReportType] = useState('client');
+    const [reportTimeframe, setReportTimeframe] = useState('monthly');
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -98,6 +104,27 @@ const Analytics: React.FC = () => {
         return () => clearInterval(interval);
     }, []);
 
+    const handleReportTypeChange = (event: React.ChangeEvent<HTMLSelectElement> | any) => {
+        setReportType(event.target.value);
+    };
+
+    const handleReportTimeframeChange = (event: React.ChangeEvent<HTMLSelectElement> | any) => {
+        setReportTimeframe(event.target.value);
+    };
+
+    const chartOptions = {
+        responsive: true,
+        plugins: {
+            legend: {
+                position: 'top' as const,
+            },
+            title: {
+                display: true,
+                text: 'Client Engagement',
+            },
+        },
+    };
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 4 }}>
@@ -108,6 +135,32 @@ const Analytics: React.FC = () => {
           Gain insights into client engagement and investment outcomes
         </Typography>
       </Box>
+
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, gap: 2 }}>
+            <FormControl sx={{ minWidth: 180 }} size="small">
+                <InputLabel>Report Type</InputLabel>
+                <Select
+                    value={reportType}
+                    onChange={handleReportTypeChange}
+                    label="Report Type"
+                >
+                    <MenuItem value="client">Client</MenuItem>
+                    <MenuItem value="portfolio">Portfolio</MenuItem>
+                </Select>
+            </FormControl>
+            <FormControl sx={{ minWidth: 180 }} size="small">
+                <InputLabel>Timeframe</InputLabel>
+                <Select
+                    value={reportTimeframe}
+                    onChange={handleReportTimeframeChange}
+                    label="Timeframe"
+                >
+                    <MenuItem value="monthly">Monthly</MenuItem>
+                    <MenuItem value="quarterly">Quarterly</MenuItem>
+                    <MenuItem value="yearly">Yearly</MenuItem>
+                </Select>
+            </FormControl>
+        </Box>
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={8}>
@@ -124,7 +177,7 @@ const Analytics: React.FC = () => {
                 <Typography variant="h6">Client Engagement</Typography>
                 <Timeline color="primary" />
               </Box>
-              <Bar data={engagementData} />
+              <Bar data={engagementData} options={chartOptions} />
             </CardContent>
           </Card>
         </Grid>

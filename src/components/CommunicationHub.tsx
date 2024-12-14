@@ -30,7 +30,8 @@ import {
   Divider,
   Badge,
   Alert,
-		Tooltip,
+  Tooltip,
+  Snackbar,
 } from '@mui/material';
 import {
   Email,
@@ -44,7 +45,7 @@ import {
   Link as LinkIcon,
   EmojiEmotions,
   NotificationsActive,
-		Sms,
+  Sms,
 } from '@mui/icons-material';
 
 interface Message {
@@ -68,70 +69,81 @@ interface Meeting {
   status: 'scheduled' | 'completed' | 'cancelled';
 }
 
-const mockMessages: Message[] = [
-  {
-    id: 1,
-    sender: 'John Doe',
-    content: 'Question about my portfolio performance',
-    timestamp: '10:30 AM',
-    type: 'email',
-    avatar: 'JD',
-    isRead: false,
-  },
-  {
-    id: 2,
-    sender: 'Sarah Smith',
-    content: 'Requesting meeting for retirement planning',
-    timestamp: '11:45 AM',
-    type: 'message',
-    avatar: 'SS',
-    isRead: true,
-  },
-  {
-    id: 3,
-    sender: 'System',
-    content: 'Market alert: S&P 500 down 2%',
-    timestamp: '12:15 PM',
-    type: 'system',
-    avatar: 'SY',
-    isRead: false,
-  },
-];
-
-const mockMeetings: Meeting[] = [
-  {
-    id: 1,
-    client: 'Michael Johnson',
-    type: 'Virtual',
-    date: '2023-05-20',
-    time: '14:00',
-    platform: 'Zoom',
-    status: 'scheduled',
-  },
-  {
-    id: 2,
-    client: 'Emma Wilson',
-    type: 'In-person',
-    date: '2023-05-21',
-    time: '10:30',
-    platform: 'Office',
-    notes: 'Portfolio review and retirement planning',
-    status: 'scheduled',
-  },
-];
-
 const emailTemplates = [
   {
     id: 1,
     name: 'Portfolio Review',
     subject: 'Your Quarterly Portfolio Review',
-    content: 'Dear [Client Name],\n\nI hope this email finds you well. I wanted to schedule some time to review your portfolio performance...',
+    content: `Dear [Client Name],
+
+I hope this email finds you well. I wanted to schedule some time to review your portfolio performance for the past quarter. During our review, we'll discuss:
+
+1. Portfolio Performance Analysis
+2. Market Conditions Impact
+3. Rebalancing Opportunities
+4. Progress Towards Your Financial Goals
+5. Any Adjustments Needed to Your Strategy
+
+Please let me know what time works best for you next week.
+
+Best regards,
+[Your Name]`,
   },
   {
     id: 2,
     name: 'Market Update',
     subject: 'Important Market Update',
-    content: 'Dear [Client Name],\n\nI wanted to bring to your attention some recent market developments...',
+    content: `Dear [Client Name],
+
+I wanted to bring to your attention some recent market developments that may affect your portfolio:
+
+• Market Overview: [Current Market Situation]
+• Impact on Your Portfolio: [Specific Impact]
+• Our Strategy: [Action Plan]
+• Recommendations: [Specific Recommendations]
+
+Please don't hesitate to schedule a call if you'd like to discuss these developments in detail.
+
+Best regards,
+[Your Name]`,
+  },
+  {
+    id: 3,
+    name: 'Tax Planning',
+    subject: 'Year-End Tax Planning Strategies',
+    content: `Dear [Client Name],
+
+As we approach the end of the tax year, I wanted to discuss some tax planning strategies that could benefit your financial situation:
+
+1. Tax-Loss Harvesting Opportunities
+2. Retirement Account Contributions
+3. Charitable Giving Strategies
+4. Required Minimum Distributions (if applicable)
+5. Tax-Efficient Investment Strategies
+
+Would you like to schedule a meeting to review these strategies in detail?
+
+Best regards,
+[Your Name]`,
+  },
+  {
+    id: 4,
+    name: 'Retirement Planning',
+    subject: 'Retirement Planning Check-In',
+    content: `Dear [Client Name],
+
+I'd like to schedule our retirement planning review to ensure we're on track with your goals. We'll cover:
+
+• Progress Towards Retirement Goals
+• Income Projections
+• Risk Assessment
+• Social Security Strategy
+• Healthcare Planning
+
+Please let me know your availability for a detailed discussion.
+
+Best regards,
+[Your Name]`,
   },
 ];
 
@@ -162,6 +174,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [selectedType, setSelectedType] = useState('virtual');
+  const [selectedPlatform, setSelectedPlatform] = useState('Zoom');
   const [selectedClient, setSelectedClient] = useState('');
   const [meetingNotes, setMeetingNotes] = useState('');
   const [emailSubject, setEmailSubject] = useState('');
@@ -169,20 +182,92 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
   const [selectedTemplate, setSelectedTemplate] = useState('');
   const [messages, setMessages] = useState<Message[]>(mockMessages);
   const [meetings, setMeetings] = useState<Meeting[]>(mockMeetings);
+  const [snackbarOpen, setSnackbarOpen] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
   const messageEndRef = useRef<null | HTMLDivElement>(null);
   const messageInputRef = useRef<HTMLDivElement>(null);
   const [messageInputHasFocus, setMessageInputHasFocus] = useState(false);
 
   const sendAutomatedUpdate = (client: string, update: string) => {
-    // Placeholder for automated financial updates
-    console.log(`Sending automated update to ${client}: ${update}`);
+    // Implement automated financial updates
+    setSnackbarMessage(`Automated update sent to ${client}`);
+    setSnackbarOpen(true);
+    
+    // Add to messages
+    const automatedMessage: Message = {
+      id: messages.length + 1,
+      sender: 'System',
+      content: `Automated Update: ${update}`,
+      timestamp: new Date().toLocaleTimeString(),
+      type: 'system',
+      avatar: 'SY',
+      isRead: false,
+    };
+    setMessages([...messages, automatedMessage]);
   };
 
   const sendPushNotification = (message: string) => {
-    // TODO: Implement push notification logic here
-    console.log(`Sending push notification: ${message}`);
+    // Implement push notification
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('Financial Advisor App', { body: message });
+    } else if ('Notification' in window && Notification.permission !== 'denied') {
+      Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          new Notification('Financial Advisor App', { body: message });
+        }
+      });
+    }
+    
+    setSnackbarMessage('Push notification sent');
+    setSnackbarOpen(true);
   };
 
+  const handleSendMessage = () => {
+    if (messageInputRef.current && messageInputRef.current.textContent) {
+      const newMessage: Message = {
+        id: messages.length + 1,
+        sender: 'You',
+        content: messageInputRef.current.textContent,
+        timestamp: new Date().toLocaleTimeString(),
+        type: 'message',
+        avatar: 'YO',
+        isRead: true,
+      };
+      setMessages([...messages, newMessage]);
+      messageInputRef.current.textContent = '';
+      
+      // Simulate response
+      setTimeout(() => {
+        const responseMessage: Message = {
+          id: messages.length + 2,
+          sender: 'System',
+          content: 'Message received and will be processed shortly.',
+          timestamp: new Date().toLocaleTimeString(),
+          type: 'system',
+          avatar: 'SY',
+          isRead: false,
+        };
+        setMessages(prev => [...prev, responseMessage]);
+      }, 1000);
+    }
+  };
+
+  const handleSendSMS = () => {
+    setSnackbarMessage('SMS sent successfully');
+    setSnackbarOpen(true);
+    
+    // Add to messages
+    const smsMessage: Message = {
+      id: messages.length + 1,
+      sender: 'You',
+      content: 'SMS: ' + document.querySelector<HTMLInputElement>('[placeholder="Type your message..."]')?.value,
+      timestamp: new Date().toLocaleTimeString(),
+      type: 'message',
+      avatar: 'YO',
+      isRead: true,
+    };
+    setMessages([...messages, smsMessage]);
+  };
 
   const scrollToBottom = () => {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -192,7 +277,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
     scrollToBottom();
   }, [messages]);
 
-    useEffect(() => {
+  useEffect(() => {
     const handleFocus = () => setMessageInputHasFocus(true);
     const handleBlur = () => setMessageInputHasFocus(false);
 
@@ -226,6 +311,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
     setSelectedDate('');
     setSelectedTime('');
     setSelectedType('virtual');
+    setSelectedPlatform('Zoom');
     setSelectedClient('');
     setMeetingNotes('');
   };
@@ -237,7 +323,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
       type: selectedType as 'Virtual' | 'In-person' | 'Phone',
       date: selectedDate,
       time: selectedTime,
-      platform: selectedType === 'virtual' ? 'Zoom' : 'Office',
+      platform: selectedPlatform,
       notes: meetingNotes,
       status: 'scheduled',
     };
@@ -264,6 +350,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
   const handleTemplateSelect = (event: SelectChangeEvent<string>) => {
     const template = emailTemplates.find(t => t.id === parseInt(event.target.value));
     if (template) {
+      setSelectedTemplate(event.target.value);
       setEmailSubject(template.subject);
       setEmailContent(template.content);
     }
@@ -273,7 +360,7 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
     const newMessage: Message = {
       id: messages.length + 1,
       sender: 'You',
-      content: emailSubject,
+      content: `Email: ${emailSubject}`,
       timestamp: new Date().toLocaleTimeString(),
       type: 'email',
       avatar: 'YO',
@@ -282,12 +369,20 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
     setMessages([...messages, newMessage]);
     setEmailSubject('');
     setEmailContent('');
+    setSelectedTemplate('');
+    
+    setSnackbarMessage('Email sent successfully');
+    setSnackbarOpen(true);
   };
 
   const handleClearMessageInput = () => {
     if (messageInputRef.current) {
       messageInputRef.current.innerHTML = '';
     }
+  };
+
+  const handleSnackbarClose = () => {
+    setSnackbarOpen(false);
   };
 
   const unreadCount = messages.filter(m => !m.isRead).length;
@@ -302,9 +397,6 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
           Manage all your client communications in one place
         </Typography>
       </Box>
-      <Alert severity="info" sx={{ mb: 2 }}>
-        Automated personalized financial updates, insights, and push notifications are coming soon!
-      </Alert>
 
       <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
         <Tabs value={tabValue} onChange={handleTabChange} aria-label="communication tabs">
@@ -393,10 +485,14 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
                       flexGrow: 1,
                       minHeight: '40px',
                       overflow: 'auto',
-                      
                     }}
                     data-placeholder="Type your message..."
-                    
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
                   />
                   <IconButton color="primary">
                     <AttachFile />
@@ -404,7 +500,11 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
                   <IconButton color="primary">
                     <EmojiEmotions />
                   </IconButton>
-                  <Button variant="contained" endIcon={<Send />}>
+                  <Button 
+                    variant="contained" 
+                    endIcon={<Send />}
+                    onClick={handleSendMessage}
+                  >
                     Send
                   </Button>
                   <Button onClick={handleClearMessageInput}>Clear</Button>
@@ -466,7 +566,11 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
               placeholder="Type your message..."
             />
             <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-              <Button variant="contained" endIcon={<Send />}>
+              <Button 
+                variant="contained" 
+                endIcon={<Send />}
+                onClick={handleSendSMS}
+              >
                 Send Text
               </Button>
             </Box>
@@ -649,8 +753,8 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
           <FormControl fullWidth margin="normal">
             <InputLabel>Meeting Platform</InputLabel>
             <Select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
+              value={selectedPlatform}
+              onChange={(e) => setSelectedPlatform(e.target.value)}
               label="Meeting Platform"
             >
               <MenuItem value="Zoom">Zoom</MenuItem>
@@ -680,8 +784,67 @@ const CommunicationHub: React.FC = (): React.ReactElement => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        message={snackbarMessage}
+      />
     </Container>
   );
 };
+
+const mockMessages: Message[] = [
+  {
+    id: 1,
+    sender: 'John Doe',
+    content: 'Question about my portfolio performance',
+    timestamp: '10:30 AM',
+    type: 'email',
+    avatar: 'JD',
+    isRead: false,
+  },
+  {
+    id: 2,
+    sender: 'Sarah Smith',
+    content: 'Requesting meeting for retirement planning',
+    timestamp: '11:45 AM',
+    type: 'message',
+    avatar: 'SS',
+    isRead: true,
+  },
+  {
+    id: 3,
+    sender: 'System',
+    content: 'Market alert: S&P 500 down 2%',
+    timestamp: '12:15 PM',
+    type: 'system',
+    avatar: 'SY',
+    isRead: false,
+  },
+];
+
+const mockMeetings: Meeting[] = [
+  {
+    id: 1,
+    client: 'Michael Johnson',
+    type: 'Virtual',
+    date: '2023-05-20',
+    time: '14:00',
+    platform: 'Zoom',
+    status: 'scheduled',
+  },
+  {
+    id: 2,
+    client: 'Emma Wilson',
+    type: 'In-person',
+    date: '2023-05-21',
+    time: '10:30',
+    platform: 'Office',
+    notes: 'Portfolio review and retirement planning',
+    status: 'scheduled',
+  },
+];
 
 export default CommunicationHub;

@@ -36,6 +36,7 @@ import {
   AttachMoney,
   Flag,
   Assessment,
+  Delete,
 } from '@mui/icons-material';
 
 interface Client {
@@ -110,6 +111,7 @@ const ClientManagement: React.FC = () => {
   const [openGoalDialog, setOpenGoalDialog] = useState(false);
   const [openAddClientDialog, setOpenAddClientDialog] = useState(false);
   const [openEditClientDialog, setOpenEditClientDialog] = useState(false);
+  const [openEditGoalDialog, setOpenEditGoalDialog] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [newClientEmail, setNewClientEmail] = useState('');
   const [newClientAum, setNewClientAum] = useState('');
@@ -123,6 +125,10 @@ const ClientManagement: React.FC = () => {
   const [editClientAum, setEditClientAum] = useState('');
   const [editClientRiskProfile, setEditClientRiskProfile] = useState('');
   const [editClientSegment, setEditClientSegment] = useState('');
+  const [editGoalId, setEditGoalId] = useState<number | null>(null);
+  const [editGoalName, setEditGoalName] = useState('');
+  const [editGoalTarget, setEditGoalTarget] = useState('');
+  const [editGoalDeadline, setEditGoalDeadline] = useState('');
 
   const handleClientClick = (client: Client) => {
     setSelectedClient(client);
@@ -144,6 +150,38 @@ const ClientManagement: React.FC = () => {
     setNewGoalDeadline('');
   };
 
+    const handleEditGoalOpen = (goal: Goal) => {
+        if (selectedClient) {
+            setEditGoalId(goal.id);
+            setEditGoalName(goal.name);
+            setEditGoalTarget(goal.target.toString());
+            setEditGoalDeadline(goal.deadline);
+            setOpenEditGoalDialog(true);
+        }
+    };
+
+    const handleEditGoalClose = () => {
+        setOpenEditGoalDialog(false);
+        setEditGoalId(null);
+    };
+
+    const handleEditGoalSubmit = () => {
+        if (selectedClient && editGoalId) {
+            const updatedGoals = selectedClient.goals.map(goal =>
+                goal.id === editGoalId ? {
+                    ...goal,
+                    name: editGoalName,
+                    target: parseFloat(editGoalTarget),
+                    deadline: editGoalDeadline,
+                } : goal
+            );
+            const updatedClient = { ...selectedClient, goals: updatedGoals };
+            setClients(clients.map(client => client.id === selectedClient.id ? updatedClient : client));
+            setSelectedClient(updatedClient);
+            handleEditGoalClose();
+        }
+    };
+
   const handleAddGoalSubmit = () => {
     if (selectedClient) {
       const newGoal: Goal = {
@@ -160,38 +198,37 @@ const ClientManagement: React.FC = () => {
     }
   };
 
-    const handleEditClientOpen = () => {
-        if (selectedClient) {
-            setEditClientName(selectedClient.name);
-            setEditClientEmail(selectedClient.email);
-            setEditClientAum(selectedClient.aum.toString());
-            setEditClientRiskProfile(selectedClient.riskProfile);
-            setEditClientSegment(selectedClient.segment);
-            setOpenEditClientDialog(true);
-        }
-    };
+  const handleEditClientOpen = () => {
+    if (selectedClient) {
+      setEditClientName(selectedClient.name);
+      setEditClientEmail(selectedClient.email);
+      setEditClientAum(selectedClient.aum.toString());
+      setEditClientRiskProfile(selectedClient.riskProfile);
+      setEditClientSegment(selectedClient.segment);
+      setOpenEditClientDialog(true);
+    }
+  };
 
-    const handleEditClientClose = () => {
-        setOpenEditClientDialog(false);
-    };
+  const handleEditClientClose = () => {
+    setOpenEditClientDialog(false);
+  };
 
-    const handleEditClientSubmit = () => {
-        if (selectedClient) {
-            const updatedClient = {
-                ...selectedClient,
-                name: editClientName,
-                email: editClientEmail,
-                aum: parseFloat(editClientAum),
-                riskProfile: editClientRiskProfile,
-                segment: editClientSegment as 'High Value' | 'Mid Tier' | 'Growth Potential',
-            };
-            setClients(clients.map(client => client.id === selectedClient.id ? updatedClient : client));
-            setSelectedClient(updatedClient);
-            handleEditClientClose();
-            setOpenDialog(false);
-        }
-    };
-
+  const handleEditClientSubmit = () => {
+    if (selectedClient) {
+      const updatedClient = {
+        ...selectedClient,
+        name: editClientName,
+        email: editClientEmail,
+        aum: parseFloat(editClientAum),
+        riskProfile: editClientRiskProfile,
+        segment: editClientSegment as 'High Value' | 'Mid Tier' | 'Growth Potential',
+      };
+      setClients(clients.map(client => client.id === selectedClient.id ? updatedClient : client));
+      setSelectedClient(updatedClient);
+      handleEditClientClose();
+      setOpenDialog(false);
+    }
+  };
 
   const handleAddClientOpen = () => {
     setOpenAddClientDialog(true);
@@ -223,6 +260,14 @@ const ClientManagement: React.FC = () => {
     setClients([...clients, newClient]);
     handleAddClientClose();
   };
+
+    const handleDeleteClient = () => {
+        if (selectedClient) {
+            const updatedClients = clients.filter(client => client.id !== selectedClient.id);
+            setClients(updatedClients);
+            setOpenDialog(false);
+        }
+    };
 
   const getSegmentColor = (segment: string) => {
     switch (segment) {
@@ -390,6 +435,13 @@ const ClientManagement: React.FC = () => {
                               Deadline: {goal.deadline}
                             </Typography>
                           </Box>
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                                <Tooltip title="Edit Goal">
+                                    <IconButton size="small" onClick={() => handleEditGoalOpen(goal)}>
+                                        <Edit />
+                                    </IconButton>
+                                </Tooltip>
+                            </Box>
                         </Box>
                       ))}
                     </CardContent>
@@ -399,6 +451,9 @@ const ClientManagement: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenDialog(false)}>Close</Button>
+                <Button variant="outlined" color="error" startIcon={<Delete />} onClick={handleDeleteClient}>
+                    Delete Client
+                </Button>
               <Button variant="contained" startIcon={<Edit />} onClick={handleEditClientOpen}>
                 Edit Profile
               </Button>
@@ -511,6 +566,43 @@ const ClientManagement: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+        {/* Edit Goal Dialog */}
+        <Dialog open={openEditGoalDialog} onClose={handleEditGoalClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Edit Goal</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Goal Name"
+                    margin="normal"
+                    value={editGoalName}
+                    onChange={(e) => setEditGoalName(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Target Amount"
+                    type="number"
+                    margin="normal"
+                    value={editGoalTarget}
+                    onChange={(e) => setEditGoalTarget(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Deadline"
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                    margin="normal"
+                    value={editGoalDeadline}
+                    onChange={(e) => setEditGoalDeadline(e.target.value)}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleEditGoalClose}>Cancel</Button>
+                <Button onClick={handleEditGoalSubmit} variant="contained" color="primary">
+                    Save
+                </Button>
+            </DialogActions>
+        </Dialog>
 
       {/* Add Client Dialog */}
       <Dialog

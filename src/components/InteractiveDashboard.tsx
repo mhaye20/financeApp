@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -22,6 +22,13 @@ import {
   Snackbar,
   Switch,
   FormControlLabel,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from '@mui/material';
 import {
   TrendingUp,
@@ -30,6 +37,8 @@ import {
   Calculate,
   ShowChart,
   PieChart,
+  Notifications,
+  NotificationsActive,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -55,76 +64,198 @@ ChartJS.register(
   ArcElement
 );
 
+interface Alert {
+  id: number;
+  type: string;
+  message: string;
+		timestamp: string;
+		severity: 'error' | 'warning' | 'info' | 'success';
+}
+
+interface TaxBracket {
+		rate: number;
+		min: number;
+		max: number | null;
+}
+
+const taxBrackets: TaxBracket[] = [
+  { rate: 10, min: 0, max: 11000 },
+  { rate: 12, min: 11001, max: 44725 },
+  { rate: 22, min: 44726, max: 95375 },
+  { rate: 24, min: 95376, max: 182100 },
+  { rate: 32, min: 182101, max: 231250 },
+  { rate: 35, min: 231251, max: 578125 },
+  { rate: 37, min: 578126, max: null },
+];
+
 const calculateCompoundInterest = (
   principal: number,
   monthlyContribution: number,
   years: number,
   rate: number
-): number => {
+): { total: number; yearlyData: { year: number; amount: number }[] } => {
   const r = rate / 100 / 12;
-  const n = years * 12;
-  const futureValuePrincipal = principal * Math.pow(1 + r, n);
-  const futureValueContributions =
-    monthlyContribution * ((Math.pow(1 + r, n) - 1) / r);
-  return futureValuePrincipal + futureValueContributions;
+  const yearlyData = [];
+  let currentAmount = principal;
+
+  for (let year = 1; year <= years; year++) {
+    for (let month = 1; month <= 12; month++) {
+      currentAmount = (currentAmount + monthlyContribution) * (1 + r);
+    }
+    yearlyData.push({
+      year,
+      amount: currentAmount,
+    });
+  }
+
+  return {
+    total: currentAmount,
+    yearlyData,
+  };
 };
 
-const calculateTaxLiability = (income: number, taxRate: number): number => {
-  return (income * taxRate) / 100;
+const calculateTaxLiability = (income: number): {
+  totalTax: number;
+  effectiveRate: number;
+  brackets: { rate: number; tax: number; income: number }[];
+} => {
+  let totalTax = 0;
+  const brackets: { rate: number; tax: number; income: number }[] = [];
+
+  taxBrackets.forEach((bracket, index) => {
+    if (income > bracket.min) {
+      const taxableInThisBracket =
+        bracket.max === null
+          ? income - bracket.min
+          : Math.min(income - bracket.min, bracket.max - bracket.min);
+      
+      const taxInBracket = (taxableInThisBracket * bracket.rate) / 100;
+      totalTax += taxInBracket;
+      
+      brackets.push({
+        rate: bracket.rate,
+        tax: taxInBracket,
+        income: taxableInThisBracket,
+      });
+    }
+  });
+
+  return {
+    totalTax,
+    effectiveRate: (totalTax / income) * 100,
+    brackets,
+  };
 };
 
-const mockPortfolioData = {
-  labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-  datasets: [
+const generatePortfolioData = (months: number = 12, showRealTimeUpdates: boolean = false) => {
+  const labels = [];
+  const data = [];
+  let baseValue = 100000;
+
+  for (let i = 0; i < months; i++) {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (months - 1 - i));
+    labels.push(date.toLocaleString('default', { month: 'short', year: '2-digit' }));
+    
+    // Add some randomness for real-time simulation
+    const volatility = showRealTimeUpdates ? (Math.random() - 0.5) * 0.05 : 0.01;
+    baseValue = baseValue * (1 + volatility);
+    data.push(Math.round(baseValue));
+  }
+
+  return {
+    labels,
+    datasets: [
+      {
+        label: 'Portfolio Value',
+        data,
+        borderColor: 'rgb(75, 192, 192)',
+        tension: 0.1,
+        fill: true,
+        backgroundColor: 'rgba(75, 192, 192, 0.1)',
+      },
+    ],
+  };
+};
+
+const generateAllocationData = (showRealTimeUpdates: boolean = false) => {
+  // Base allocations
+  let stocks = 45;
+  let bonds = 30;
+  let realEstate = 15;
+  let cash = 10;
+
+  // Add some variation for real-time updates
+  if (showRealTimeUpdates) {
+    const variation = 2;
+    stocks += (Math.random() - 0.5) * variation;
+    bonds += (Math.random() - 0.5) * variation;
+    realEstate += (Math.random() - 0.5) * variation;
+    cash += (Math.random() - 0.5) * variation;
+
+    // Normalize to ensure total is 100%
+    const total = stocks + bonds + realEstate + cash;
+    stocks = (stocks / total) * 100;
+    bonds = (bonds / total) * 100;
+    realEstate = (realEstate / total) * 100;
+    cash = (cash / total) * 100;
+  }
+
+  return {
+    labels: ['Stocks', 'Bonds', 'Real Estate', 'Cash'],
+    datasets: [
+      {
+        data: [stocks, bonds, realEstate, cash],
+        backgroundColor: [
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+        ],
+      },
+    ],
+  };
+};
+
+const generateAlerts = () => {
+  const baseAlerts = [
     {
-      label: 'Portfolio Value',
-      data: [100000, 105000, 110000, 115000, 120000, 125000],
-      borderColor: 'rgb(75, 192, 192)',
-      tension: 0.1,
-      fill: true,
-      backgroundColor: 'rgba(75, 192, 192, 0.1)',
+      id: 1,
+      type: 'Market Change',
+      message: 'S&P 500 is down by 2%',
+      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toLocaleTimeString(),
+      severity: 'warning' as const,
     },
-  ],
-};
-
-const mockAllocationData = {
-  labels: ['Stocks', 'Bonds', 'Real Estate', 'Cash'],
-  datasets: [
     {
-      data: [45, 30, 15, 10],
-      backgroundColor: [
-        'rgba(75, 192, 192, 0.8)',
-        'rgba(54, 162, 235, 0.8)',
-        'rgba(255, 206, 86, 0.8)',
-        'rgba(153, 102, 255, 0.8)',
-      ],
+      id: 2,
+      type: 'Investment Opportunity',
+      message: 'New tech stock with high growth potential',
+      timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000).toLocaleTimeString(),
+      severity: 'info' as const,
     },
-  ],
-};
+    {
+      id: 3,
+      type: 'Portfolio Alert',
+      message: 'Your portfolio has exceeded target allocation',
+      timestamp: new Date().toLocaleTimeString(),
+      severity: 'error' as const,
+    },
+  ];
 
-const mockAlerts = [
-  {
-    id: 1,
-    type: 'Market Change',
-    message: 'S&P 500 is down by 2%',
-    timestamp: '10:00 AM',
-    severity: 'warning',
-  },
-  {
-    id: 2,
-    type: 'Investment Opportunity',
-    message: 'New tech stock with high growth potential',
-    timestamp: '11:30 AM',
-    severity: 'info',
-  },
-  {
-    id: 3,
-    type: 'Portfolio Alert',
-    message: 'Your portfolio has exceeded target allocation',
-    timestamp: '12:45 PM',
-    severity: 'error',
-  },
-];
+  // Add dynamic market updates
+  const marketChange = (Math.random() - 0.5) * 4;
+  if (Math.abs(marketChange) > 1) {
+    baseAlerts.unshift({
+      id: Date.now(),
+      type: 'Market Update',
+      message: `Market ${marketChange > 0 ? 'up' : 'down'} by ${Math.abs(marketChange).toFixed(1)}%`,
+      timestamp: new Date().toLocaleTimeString(),
+      severity: marketChange > 0 ? 'success' : 'warning',
+    } as any);
+  }
+
+  return baseAlerts;
+};
 
 const InteractiveDashboard: React.FC = () => {
   const [openCalculator, setOpenCalculator] = useState(false);
@@ -136,18 +267,32 @@ const InteractiveDashboard: React.FC = () => {
   const [monthlyContribution, setMonthlyContribution] = useState('1000');
   const [taxRate, setTaxRate] = useState('25');
   const [investmentReturn, setInvestmentReturn] = useState('7');
-  const [calculationResult, setCalculationResult] = useState<number | null>(null);
+  const [calculationResult, setCalculationResult] = useState<any>(null);
   const [showSnackbar, setShowSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
   const [chartType, setChartType] = useState<'line' | 'pie'>('line');
   const [showRealTimeUpdates, setShowRealTimeUpdates] = useState(true);
-    const [currentAgeError, setCurrentAgeError] = useState('');
-    const [retirementAgeError, setRetirementAgeError] = useState('');
-    const [currentSavingsError, setCurrentSavingsError] = useState('');
-    const [monthlyContributionError, setMonthlyContributionError] = useState('');
-    const [investmentReturnError, setInvestmentReturnError] = useState('');
-    const [taxRateError, setTaxRateError] = useState('');
+  const [portfolioData, setPortfolioData] = useState(generatePortfolioData(12, true));
+  const [allocationData, setAllocationData] = useState(generateAllocationData(true));
+  const [alerts, setAlerts] = useState(generateAlerts());
+  const [currentAgeError, setCurrentAgeError] = useState('');
+  const [retirementAgeError, setRetirementAgeError] = useState('');
+  const [currentSavingsError, setCurrentSavingsError] = useState('');
+  const [monthlyContributionError, setMonthlyContributionError] = useState('');
+  const [investmentReturnError, setInvestmentReturnError] = useState('');
+  const [taxRateError, setTaxRateError] = useState('');
 
+  useEffect(() => {
+    if (showRealTimeUpdates) {
+      const interval = setInterval(() => {
+        setPortfolioData(generatePortfolioData(12, true));
+        setAllocationData(generateAllocationData(true));
+        setAlerts(generateAlerts());
+      }, 5000);
+
+      return () => clearInterval(interval);
+    }
+  }, [showRealTimeUpdates]);
 
   const handleCalculatorOpen = () => {
     setOpenCalculator(true);
@@ -156,23 +301,23 @@ const InteractiveDashboard: React.FC = () => {
   const handleCalculatorClose = () => {
     setOpenCalculator(false);
     setCalculationResult(null);
-      resetCalculatorForm();
+    resetCalculatorForm();
   };
 
-    const resetCalculatorForm = () => {
-        setCurrentAge('30');
-        setRetirementAge('65');
-        setCurrentSavings('50000');
-        setMonthlyContribution('1000');
-        setTaxRate('25');
-        setInvestmentReturn('7');
-        setCurrentAgeError('');
-        setRetirementAgeError('');
-        setCurrentSavingsError('');
-        setMonthlyContributionError('');
-        setInvestmentReturnError('');
-        setTaxRateError('');
-    };
+  const resetCalculatorForm = () => {
+    setCurrentAge('30');
+    setRetirementAge('65');
+    setCurrentSavings('50000');
+    setMonthlyContribution('1000');
+    setTaxRate('25');
+    setInvestmentReturn('7');
+    setCurrentAgeError('');
+    setRetirementAgeError('');
+    setCurrentSavingsError('');
+    setMonthlyContributionError('');
+    setInvestmentReturnError('');
+    setTaxRateError('');
+  };
 
   const handleSettingsOpen = () => {
     setOpenSettings(true);
@@ -182,87 +327,83 @@ const InteractiveDashboard: React.FC = () => {
     setOpenSettings(false);
   };
 
-    const validateCalculatorInputs = () => {
-        let isValid = true;
+  const validateCalculatorInputs = () => {
+    let isValid = true;
 
-        if (calculatorType === 'retirement') {
-            if (!currentAge || isNaN(Number(currentAge)) || Number(currentAge) < 0 || Number(currentAge) > 100) {
-                setCurrentAgeError('Please enter a valid current age (0-100)');
-                isValid = false;
-            } else {
-                setCurrentAgeError('');
-            }
+    if (calculatorType === 'retirement') {
+      if (!currentAge || isNaN(Number(currentAge)) || Number(currentAge) < 0 || Number(currentAge) > 100) {
+        setCurrentAgeError('Please enter a valid current age (0-100)');
+        isValid = false;
+      } else {
+        setCurrentAgeError('');
+      }
 
-            if (!retirementAge || isNaN(Number(retirementAge)) || Number(retirementAge) < 0 || Number(retirementAge) > 100) {
-                setRetirementAgeError('Please enter a valid retirement age (0-100)');
-                isValid = false;
-            } else {
-                setRetirementAgeError('');
-            }
+      if (!retirementAge || isNaN(Number(retirementAge)) || Number(retirementAge) < 0 || Number(retirementAge) > 100) {
+        setRetirementAgeError('Please enter a valid retirement age (0-100)');
+        isValid = false;
+      } else {
+        setRetirementAgeError('');
+      }
 
-            if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
-                setCurrentSavingsError('Please enter a valid current savings amount');
-                isValid = false;
-            } else {
-                setCurrentSavingsError('');
-            }
+      if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
+        setCurrentSavingsError('Please enter a valid current savings amount');
+        isValid = false;
+      } else {
+        setCurrentSavingsError('');
+      }
 
-            if (!monthlyContribution || isNaN(Number(monthlyContribution)) || Number(monthlyContribution) < 0) {
-                setMonthlyContributionError('Please enter a valid monthly contribution amount');
-                isValid = false;
-            } else {
-                setMonthlyContributionError('');
-            }
+      if (!monthlyContribution || isNaN(Number(monthlyContribution)) || Number(monthlyContribution) < 0) {
+        setMonthlyContributionError('Please enter a valid monthly contribution amount');
+        isValid = false;
+      } else {
+        setMonthlyContributionError('');
+      }
 
-            if (!investmentReturn || isNaN(Number(investmentReturn)) || Number(investmentReturn) < 0 || Number(investmentReturn) > 100) {
-                setInvestmentReturnError('Please enter a valid investment return (0-100)');
-                isValid = false;
-            } else {
-                setInvestmentReturnError('');
-            }
-        } else {
-            if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
-                setCurrentSavingsError('Please enter a valid annual income');
-                isValid = false;
-            } else {
-                setCurrentSavingsError('');
-            }
+      if (!investmentReturn || isNaN(Number(investmentReturn)) || Number(investmentReturn) < 0 || Number(investmentReturn) > 100) {
+        setInvestmentReturnError('Please enter a valid investment return (0-100)');
+        isValid = false;
+      } else {
+        setInvestmentReturnError('');
+      }
+    } else {
+      if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
+        setCurrentSavingsError('Please enter a valid annual income');
+        isValid = false;
+      } else {
+        setCurrentSavingsError('');
+      }
+    }
 
-            if (!taxRate || isNaN(Number(taxRate)) || Number(taxRate) < 0 || Number(taxRate) > 100) {
-                setTaxRateError('Please enter a valid tax rate (0-100)');
-                isValid = false;
-            } else {
-                setTaxRateError('');
-            }
-        }
-
-        return isValid;
-    };
-
+    return isValid;
+  };
 
   const handleCalculatorSubmit = () => {
-      if (!validateCalculatorInputs()) {
-          setSnackbarMessage('Please correct the errors in the form.');
-          setShowSnackbar(true);
-          return;
-      }
+    if (!validateCalculatorInputs()) {
+      setSnackbarMessage('Please correct the errors in the form.');
+      setShowSnackbar(true);
+      return;
+    }
+
     try {
-      let result: number;
       if (calculatorType === 'retirement') {
         const years = parseInt(retirementAge) - parseInt(currentAge);
-        result = calculateCompoundInterest(
+        const result = calculateCompoundInterest(
           parseFloat(currentSavings),
           parseFloat(monthlyContribution),
           years,
           parseFloat(investmentReturn)
         );
+        setCalculationResult({
+          type: 'retirement',
+          ...result,
+        });
       } else {
-        result = calculateTaxLiability(
-          parseFloat(currentSavings),
-          parseFloat(taxRate)
-        );
+        const result = calculateTaxLiability(parseFloat(currentSavings));
+        setCalculationResult({
+          type: 'tax',
+          ...result,
+        });
       }
-      setCalculationResult(result);
       setSnackbarMessage('Calculation completed successfully!');
       setShowSnackbar(true);
     } catch (error) {
@@ -273,6 +414,13 @@ const InteractiveDashboard: React.FC = () => {
 
   const handleChartTypeChange = () => {
     setChartType(chartType === 'line' ? 'pie' : 'line');
+  };
+
+  const handleSettingsSave = () => {
+    // Reset data with new settings
+    setPortfolioData(generatePortfolioData(12, showRealTimeUpdates));
+    setAllocationData(generateAllocationData(showRealTimeUpdates));
+    handleSettingsClose();
   };
 
   const chartOptions = {
@@ -286,6 +434,16 @@ const InteractiveDashboard: React.FC = () => {
         text: chartType === 'line' ? 'Portfolio Performance' : 'Asset Allocation',
       },
     },
+    scales: chartType === 'line' ? {
+      y: {
+        beginAtZero: false,
+        ticks: {
+          callback: function(this: any, value: number) {
+            return `$${value.toLocaleString()}`;
+          }
+        }
+      }
+    } : undefined,
   };
 
   return (
@@ -326,9 +484,9 @@ const InteractiveDashboard: React.FC = () => {
                 </Box>
               </Box>
               {chartType === 'line' ? (
-                <Line data={mockPortfolioData} options={chartOptions} />
+                <Line data={portfolioData} options={chartOptions} />
               ) : (
-                <Pie data={mockAllocationData} options={chartOptions} />
+                <Pie data={allocationData} options={chartOptions} />
               )}
             </CardContent>
           </Card>
@@ -337,13 +495,18 @@ const InteractiveDashboard: React.FC = () => {
         <Grid item xs={12} md={4}>
           <Card>
             <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Alerts & Notifications
-              </Typography>
-              {mockAlerts.map((alert) => (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="h6">Alerts & Notifications</Typography>
+                <Tooltip title={showRealTimeUpdates ? 'Real-time updates enabled' : 'Real-time updates disabled'}>
+                  <IconButton>
+                    {showRealTimeUpdates ? <NotificationsActive color="primary" /> : <Notifications />}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              {alerts.map((alert) => (
                 <Alert
                   key={alert.id}
-                  severity={alert.severity as 'error' | 'warning' | 'info' | 'success'}
+                  severity={alert.severity}
                   sx={{ mb: 1 }}
                 >
                   <Typography variant="subtitle2">{alert.type}</Typography>
@@ -438,7 +601,7 @@ const InteractiveDashboard: React.FC = () => {
       <Dialog
         open={openCalculator}
         onClose={handleCalculatorClose}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>
@@ -467,9 +630,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={currentAge}
                 onChange={(e) => setCurrentAge(e.target.value)}
-                  InputProps={{ inputProps: { min: 0, max: 100 } }}
-                  error={!!currentAgeError}
-                  helperText={currentAgeError}
+                InputProps={{ inputProps: { min: 0, max: 100 } }}
+                error={!!currentAgeError}
+                helperText={currentAgeError}
               />
               <TextField
                 fullWidth
@@ -478,9 +641,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={retirementAge}
                 onChange={(e) => setRetirementAge(e.target.value)}
-                  InputProps={{ inputProps: { min: 0, max: 100 } }}
-                  error={!!retirementAgeError}
-                  helperText={retirementAgeError}
+                InputProps={{ inputProps: { min: 0, max: 100 } }}
+                error={!!retirementAgeError}
+                helperText={retirementAgeError}
               />
               <TextField
                 fullWidth
@@ -489,9 +652,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={currentSavings}
                 onChange={(e) => setCurrentSavings(e.target.value)}
-                  InputProps={{ inputProps: { min: 0 } }}
-                  error={!!currentSavingsError}
-                  helperText={currentSavingsError}
+                InputProps={{ inputProps: { min: 0 } }}
+                error={!!currentSavingsError}
+                helperText={currentSavingsError}
               />
               <TextField
                 fullWidth
@@ -500,9 +663,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={monthlyContribution}
                 onChange={(e) => setMonthlyContribution(e.target.value)}
-                  InputProps={{ inputProps: { min: 0 } }}
-                  error={!!monthlyContributionError}
-                  helperText={monthlyContributionError}
+                InputProps={{ inputProps: { min: 0 } }}
+                error={!!monthlyContributionError}
+                helperText={monthlyContributionError}
               />
               <TextField
                 fullWidth
@@ -511,9 +674,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={investmentReturn}
                 onChange={(e) => setInvestmentReturn(e.target.value)}
-                  InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
-                  error={!!investmentReturnError}
-                  helperText={investmentReturnError}
+                InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
+                error={!!investmentReturnError}
+                helperText={investmentReturnError}
               />
             </>
           ) : (
@@ -525,41 +688,102 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={currentSavings}
                 onChange={(e) => setCurrentSavings(e.target.value)}
-                  InputProps={{ inputProps: { min: 0 } }}
-                  error={!!currentSavingsError}
-                  helperText={currentSavingsError}
-              />
-              <TextField
-                fullWidth
-                label="Tax Rate (%)"
-                type="number"
-                margin="normal"
-                value={taxRate}
-                onChange={(e) => setTaxRate(e.target.value)}
-                  InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
-                  error={!!taxRateError}
-                  helperText={taxRateError}
+                InputProps={{ inputProps: { min: 0 } }}
+                error={!!currentSavingsError}
+                helperText={currentSavingsError}
               />
             </>
           )}
-          {calculationResult !== null && (
-            <Alert severity="info" sx={{ mt: 2 }}>
-              <Typography variant="subtitle1">
-                {calculatorType === 'retirement'
-                  ? 'Estimated Retirement Savings:'
-                  : 'Estimated Tax Liability:'}
-              </Typography>
-              <Typography variant="h6">
-                ${(calculationResult || 0).toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </Typography>
-            </Alert>
+          {calculationResult && (
+            <Box sx={{ mt: 2 }}>
+              {calculationResult.type === 'retirement' ? (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1">
+                      Estimated Retirement Savings at Age {retirementAge}:
+                    </Typography>
+                    <Typography variant="h6">
+                      ${calculationResult.total.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Typography>
+                  </Alert>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Year</TableCell>
+                          <TableCell align="right">Age</TableCell>
+                          <TableCell align="right">Projected Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {calculationResult.yearlyData.map((data: any) => (
+                          <TableRow key={data.year}>
+                            <TableCell>{data.year}</TableCell>
+                            <TableCell align="right">
+                              {Number(currentAge) + data.year}
+                            </TableCell>
+                            <TableCell align="right">
+                              ${data.amount.toLocaleString(undefined, {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 0,
+                              })}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
+              ) : (
+                <>
+                  <Alert severity="info" sx={{ mb: 2 }}>
+                    <Typography variant="subtitle1">
+                      Tax Liability Summary:
+                    </Typography>
+                    <Typography variant="h6">
+                      Total Tax: ${calculationResult.totalTax.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </Typography>
+                    <Typography variant="subtitle2">
+                      Effective Tax Rate: {calculationResult.effectiveRate.toFixed(2)}%
+                    </Typography>
+                  </Alert>
+                  <TableContainer component={Paper}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Tax Bracket</TableCell>
+                          <TableCell align="right">Taxable Income</TableCell>
+                          <TableCell align="right">Tax Amount</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {calculationResult.brackets.map((bracket: any, index: number) => (
+                          <TableRow key={index}>
+                            <TableCell>{bracket.rate}%</TableCell>
+                            <TableCell align="right">
+                              ${bracket.income.toLocaleString()}
+                            </TableCell>
+                            <TableCell align="right">
+                              ${bracket.tax.toLocaleString()}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </>
+              )}
+            </Box>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCalculatorClose}>Cancel</Button>
+          <Button onClick={handleCalculatorClose}>Close</Button>
           <Button onClick={handleCalculatorSubmit} variant="contained">
             Calculate
           </Button>
@@ -579,11 +803,13 @@ const InteractiveDashboard: React.FC = () => {
             }
             label="Enable Real-time Updates"
           />
-          {/* Add more settings as needed */}
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            When enabled, portfolio data and alerts will update automatically every 5 seconds
+          </Typography>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleSettingsClose}>Cancel</Button>
-          <Button onClick={handleSettingsClose} variant="contained">
+          <Button onClick={handleSettingsSave} variant="contained">
             Save Settings
           </Button>
         </DialogActions>

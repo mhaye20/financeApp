@@ -23,6 +23,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Chip,
 } from '@mui/material';
 import {
   Article,
@@ -32,6 +33,7 @@ import {
   Add,
   Edit,
   Delete,
+  Category,
 } from '@mui/icons-material';
 
 interface Resource {
@@ -40,6 +42,7 @@ interface Resource {
   type: 'article' | 'video' | 'webinar';
   url: string;
   description: string;
+  category: string;
 }
 
 const mockResources: Resource[] = [
@@ -49,6 +52,7 @@ const mockResources: Resource[] = [
     type: 'article',
     url: 'https://example.com/article1',
     description: 'Learn how to navigate market fluctuations.',
+    category: 'Market Analysis',
   },
   {
     id: 2,
@@ -56,6 +60,7 @@ const mockResources: Resource[] = [
     type: 'video',
     url: 'https://example.com/video1',
     description: 'A step-by-step guide to planning for retirement.',
+    category: 'Retirement Planning',
   },
   {
     id: 3,
@@ -63,10 +68,42 @@ const mockResources: Resource[] = [
     type: 'webinar',
     url: 'https://example.com/webinar1',
     description: 'Strategies to minimize your tax burden.',
+    category: 'Tax Planning',
+  },
+  {
+    id: 4,
+    title: 'Advanced Investment Strategies',
+    type: 'article',
+    url: 'https://example.com/article2',
+    description: 'Explore advanced techniques for portfolio growth.',
+    category: 'Investment Strategies',
+  },
+  {
+    id: 5,
+    title: 'Estate Planning Guide',
+    type: 'video',
+    url: 'https://example.com/video2',
+    description: 'Learn how to plan your estate effectively.',
+    category: 'Estate Planning',
+  },
+  {
+    id: 6,
+    title: 'Economic Outlook 2024',
+    type: 'webinar',
+    url: 'https://example.com/webinar2',
+    description: 'A comprehensive look at the economic forecast for the year.',
+    category: 'Market Analysis',
   },
 ];
 
 const resourceTypes = ['article', 'video', 'webinar'];
+const resourceCategories = [
+  'Market Analysis',
+  'Retirement Planning',
+  'Tax Planning',
+  'Investment Strategies',
+  'Estate Planning',
+];
 
 const EducationalResources: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
@@ -79,17 +116,20 @@ const EducationalResources: React.FC = () => {
   const [newResourceType, setNewResourceType] = useState(resourceTypes[0]);
   const [newResourceUrl, setNewResourceUrl] = useState('');
   const [newResourceDescription, setNewResourceDescription] = useState('');
-    const [editResourceTitle, setEditResourceTitle] = useState('');
-    const [editResourceType, setEditResourceType] = useState(resourceTypes[0]);
-    const [editResourceUrl, setEditResourceUrl] = useState('');
-    const [editResourceDescription, setEditResourceDescription] = useState('');
+  const [newResourceCategory, setNewResourceCategory] = useState(resourceCategories[0]);
+  const [editResourceTitle, setEditResourceTitle] = useState('');
+  const [editResourceType, setEditResourceType] = useState(resourceTypes[0]);
+  const [editResourceUrl, setEditResourceUrl] = useState('');
+  const [editResourceDescription, setEditResourceDescription] = useState('');
+  const [editResourceCategory, setEditResourceCategory] = useState(resourceCategories[0]);
   const [resources, setResources] = useState<Resource[]>(mockResources);
-    const [newResourceTitleError, setNewResourceTitleError] = useState('');
-    const [newResourceUrlError, setNewResourceUrlError] = useState('');
-    const [newResourceDescriptionError, setNewResourceDescriptionError] = useState('');
-    const [editResourceTitleError, setEditResourceTitleError] = useState('');
-    const [editResourceUrlError, setEditResourceUrlError] = useState('');
-    const [editResourceDescriptionError, setEditResourceDescriptionError] = useState('');
+  const [newResourceTitleError, setNewResourceTitleError] = useState('');
+  const [newResourceUrlError, setNewResourceUrlError] = useState('');
+  const [newResourceDescriptionError, setNewResourceDescriptionError] = useState('');
+  const [editResourceTitleError, setEditResourceTitleError] = useState('');
+  const [editResourceUrlError, setEditResourceUrlError] = useState('');
+  const [editResourceDescriptionError, setEditResourceDescriptionError] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
 
   const handleResourceClick = (resource: Resource) => {
     setSelectedResource(resource);
@@ -101,7 +141,7 @@ const EducationalResources: React.FC = () => {
     setSelectedResource(null);
   };
 
-    const handleEditDialogClose = () => {
+  const handleEditDialogClose = () => {
     setOpenEditDialog(false);
     setSelectedResource(null);
   };
@@ -110,9 +150,21 @@ const EducationalResources: React.FC = () => {
     const query = event.target.value;
     setSearchQuery(query);
     const filtered = resources.filter((resource) =>
-      resource.title.toLowerCase().includes(query.toLowerCase())
+      resource.title.toLowerCase().includes(query.toLowerCase()) ||
+      resource.description.toLowerCase().includes(query.toLowerCase())
     );
     setFilteredResources(filtered);
+  };
+
+  const handleCategoryChange = (event: React.ChangeEvent<HTMLSelectElement> | any) => {
+    const category = event.target.value;
+    setSelectedCategory(category);
+    if (category === 'All') {
+      setFilteredResources(resources);
+    } else {
+      const filtered = resources.filter((resource) => resource.category === category);
+      setFilteredResources(filtered);
+    }
   };
 
   const handleAddResourceOpen = () => {
@@ -124,120 +176,124 @@ const EducationalResources: React.FC = () => {
     resetAddResourceForm();
   };
 
-    const handleEditResourceOpen = (resource: Resource) => {
-        setSelectedResource(resource);
-        setEditResourceTitle(resource.title);
-        setEditResourceType(resource.type);
-        setEditResourceUrl(resource.url);
-        setEditResourceDescription(resource.description);
-        setOpenEditDialog(true);
-    };
+  const handleEditResourceOpen = (resource: Resource) => {
+    setSelectedResource(resource);
+    setEditResourceTitle(resource.title);
+    setEditResourceType(resource.type);
+    setEditResourceUrl(resource.url);
+    setEditResourceDescription(resource.description);
+    setEditResourceCategory(resource.category);
+    setOpenEditDialog(true);
+  };
 
   const resetAddResourceForm = () => {
     setNewResourceTitle('');
     setNewResourceType(resourceTypes[0]);
     setNewResourceUrl('');
     setNewResourceDescription('');
-      setNewResourceTitleError('');
-      setNewResourceUrlError('');
-      setNewResourceDescriptionError('');
+    setNewResourceCategory(resourceCategories[0]);
+    setNewResourceTitleError('');
+    setNewResourceUrlError('');
+    setNewResourceDescriptionError('');
   };
 
-    const validateAddResourceForm = () => {
-        let isValid = true;
+  const validateAddResourceForm = () => {
+    let isValid = true;
 
-        if (!newResourceTitle) {
-            setNewResourceTitleError('Please enter a title');
-            isValid = false;
-        } else {
-            setNewResourceTitleError('');
-        }
+    if (!newResourceTitle) {
+      setNewResourceTitleError('Please enter a title');
+      isValid = false;
+    } else {
+      setNewResourceTitleError('');
+    }
 
-        if (!newResourceUrl) {
-            setNewResourceUrlError('Please enter a URL');
-            isValid = false;
-        } else {
-            setNewResourceUrlError('');
-        }
+    if (!newResourceUrl) {
+      setNewResourceUrlError('Please enter a URL');
+      isValid = false;
+    } else {
+      setNewResourceUrlError('');
+    }
 
-        if (!newResourceDescription) {
-            setNewResourceDescriptionError('Please enter a description');
-            isValid = false;
-        } else {
-            setNewResourceDescriptionError('');
-        }
+    if (!newResourceDescription) {
+      setNewResourceDescriptionError('Please enter a description');
+      isValid = false;
+    } else {
+      setNewResourceDescriptionError('');
+    }
 
-        return isValid;
-    };
+    return isValid;
+  };
 
-    const validateEditResourceForm = () => {
-        let isValid = true;
+  const validateEditResourceForm = () => {
+    let isValid = true;
 
-        if (!editResourceTitle) {
-            setEditResourceTitleError('Please enter a title');
-            isValid = false;
-        } else {
-            setEditResourceTitleError('');
-        }
+    if (!editResourceTitle) {
+      setEditResourceTitleError('Please enter a title');
+      isValid = false;
+    } else {
+      setEditResourceTitleError('');
+    }
 
-        if (!editResourceUrl) {
-            setEditResourceUrlError('Please enter a URL');
-            isValid = false;
-        } else {
-            setEditResourceUrlError('');
-        }
+    if (!editResourceUrl) {
+      setEditResourceUrlError('Please enter a URL');
+      isValid = false;
+    } else {
+      setEditResourceUrlError('');
+    }
 
-        if (!editResourceDescription) {
-            setEditResourceDescriptionError('Please enter a description');
-            isValid = false;
-        } else {
-            setEditResourceDescriptionError('');
-        }
+    if (!editResourceDescription) {
+      setEditResourceDescriptionError('Please enter a description');
+      isValid = false;
+    } else {
+      setEditResourceDescriptionError('');
+    }
 
-        return isValid;
-    };
+    return isValid;
+  };
 
   const handleAddResourceSubmit = () => {
-      if (!validateAddResourceForm()) {
-          return;
-      }
+    if (!validateAddResourceForm()) {
+      return;
+    }
     const newResource: Resource = {
       id: resources.length + 1,
       title: newResourceTitle,
       type: newResourceType as 'article' | 'video' | 'webinar',
       url: newResourceUrl,
       description: newResourceDescription,
+      category: newResourceCategory,
     };
     setResources([...resources, newResource]);
-      setFilteredResources([...resources, newResource]);
+    setFilteredResources([...resources, newResource]);
     handleAddResourceClose();
   };
 
-    const handleEditResourceSubmit = () => {
-        if (!validateEditResourceForm()) {
-            return;
-        }
-        if (selectedResource) {
-            const updatedResource = {
-                ...selectedResource,
-                title: editResourceTitle,
-                type: editResourceType as 'article' | 'video' | 'webinar',
-                url: editResourceUrl,
-                description: editResourceDescription,
-            };
-            setResources(resources.map(resource => resource.id === selectedResource.id ? updatedResource : resource));
-            setFilteredResources(resources.map(resource => resource.id === selectedResource.id ? updatedResource : resource));
-            handleEditDialogClose();
-        }
-    };
+  const handleEditResourceSubmit = () => {
+    if (!validateEditResourceForm()) {
+      return;
+    }
+    if (selectedResource) {
+      const updatedResource = {
+        ...selectedResource,
+        title: editResourceTitle,
+        type: editResourceType as 'article' | 'video' | 'webinar',
+        url: editResourceUrl,
+        description: editResourceDescription,
+        category: editResourceCategory,
+      };
+      setResources(resources.map(resource => resource.id === selectedResource.id ? updatedResource : resource));
+      setFilteredResources(resources.map(resource => resource.id === selectedResource.id ? updatedResource : resource));
+      handleEditDialogClose();
+    }
+  };
 
   const handleDeleteResource = () => {
-      if (selectedResource) {
-          const updatedResources = resources.filter(resource => resource.id !== selectedResource.id);
-          setResources(updatedResources);
-          setFilteredResources(updatedResources);
-          handleDialogClose();
-      }
+    if (selectedResource) {
+      const updatedResources = resources.filter(resource => resource.id !== selectedResource.id);
+      setResources(updatedResources);
+      setFilteredResources(updatedResources);
+      handleDialogClose();
+    }
   };
 
   const getIcon = (type: string) => {
@@ -264,7 +320,7 @@ const EducationalResources: React.FC = () => {
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2, alignItems: 'center' }}>
         <TextField
           label="Search Resources"
           variant="outlined"
@@ -279,6 +335,21 @@ const EducationalResources: React.FC = () => {
             ),
           }}
         />
+        <FormControl sx={{ minWidth: 180 }} size="small">
+          <InputLabel>Category</InputLabel>
+          <Select
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+            label="Category"
+          >
+            <MenuItem value="All">All Categories</MenuItem>
+            {resourceCategories.map((category) => (
+              <MenuItem key={category} value={category}>
+                {category}
+              </MenuItem>
+            ))}
+          </Select>
+        </FormControl>
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -317,9 +388,10 @@ const EducationalResources: React.FC = () => {
                     {resource.title}
                   </Typography>
                 </Box>
-                <Typography color="text.secondary">
+                <Typography color="text.secondary" gutterBottom>
                   {resource.description}
                 </Typography>
+                <Chip label={resource.category} size="small" color="primary" variant="outlined" />
               </CardContent>
             </Card>
           </Grid>
@@ -346,6 +418,9 @@ const EducationalResources: React.FC = () => {
                   {selectedResource.url}
                 </a>
               </Typography>
+              <Typography variant="body1" gutterBottom>
+                <strong>Category:</strong> {selectedResource.category}
+              </Typography>
             </DialogContent>
             <DialogActions>
               <Button onClick={handleDialogClose}>Close</Button>
@@ -370,8 +445,8 @@ const EducationalResources: React.FC = () => {
             margin="normal"
             value={newResourceTitle}
             onChange={(e) => setNewResourceTitle(e.target.value)}
-              error={!!newResourceTitleError}
-              helperText={newResourceTitleError}
+            error={!!newResourceTitleError}
+            helperText={newResourceTitleError}
           />
           <FormControl fullWidth margin="normal">
             <InputLabel>Resource Type</InputLabel>
@@ -387,14 +462,28 @@ const EducationalResources: React.FC = () => {
               ))}
             </Select>
           </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={newResourceCategory}
+              onChange={(e) => setNewResourceCategory(e.target.value)}
+              label="Category"
+            >
+              {resourceCategories.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
           <TextField
             fullWidth
             label="URL"
             margin="normal"
             value={newResourceUrl}
             onChange={(e) => setNewResourceUrl(e.target.value)}
-              error={!!newResourceUrlError}
-              helperText={newResourceUrlError}
+            error={!!newResourceUrlError}
+            helperText={newResourceUrlError}
           />
           <TextField
             fullWidth
@@ -404,8 +493,8 @@ const EducationalResources: React.FC = () => {
             rows={3}
             value={newResourceDescription}
             onChange={(e) => setNewResourceDescription(e.target.value)}
-              error={!!newResourceDescriptionError}
-              helperText={newResourceDescriptionError}
+            error={!!newResourceDescriptionError}
+            helperText={newResourceDescriptionError}
           />
         </DialogContent>
         <DialogActions>
@@ -416,61 +505,75 @@ const EducationalResources: React.FC = () => {
         </DialogActions>
       </Dialog>
 
-        {/* Edit Resource Dialog */}
-        <Dialog open={openEditDialog} onClose={handleEditDialogClose} maxWidth="sm" fullWidth>
-            <DialogTitle>Edit Resource</DialogTitle>
-            <DialogContent>
-                <TextField
-                    fullWidth
-                    label="Title"
-                    margin="normal"
-                    value={editResourceTitle}
-                    onChange={(e) => setEditResourceTitle(e.target.value)}
-                    error={!!editResourceTitleError}
-                    helperText={editResourceTitleError}
-                />
-                <FormControl fullWidth margin="normal">
-                    <InputLabel>Resource Type</InputLabel>
-                    <Select
-                        value={editResourceType}
-                        onChange={(e) => setEditResourceType(e.target.value)}
-                        label="Resource Type"
-                    >
-                        {resourceTypes.map((type) => (
-                            <MenuItem key={type} value={type}>
-                                {type}
-                            </MenuItem>
-                        ))}
-                    </Select>
-                </FormControl>
-                <TextField
-                    fullWidth
-                    label="URL"
-                    margin="normal"
-                    value={editResourceUrl}
-                    onChange={(e) => setEditResourceUrl(e.target.value)}
-                    error={!!editResourceUrlError}
-                    helperText={editResourceUrlError}
-                />
-                <TextField
-                    fullWidth
-                    label="Description"
-                    margin="normal"
-                    multiline
-                    rows={3}
-                    value={editResourceDescription}
-                    onChange={(e) => setEditResourceDescription(e.target.value)}
-                    error={!!editResourceDescriptionError}
-                    helperText={editResourceDescriptionError}
-                />
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={handleEditDialogClose}>Cancel</Button>
-                <Button onClick={handleEditResourceSubmit} variant="contained" color="primary">
-                    Save Changes
-                </Button>
-            </DialogActions>
-        </Dialog>
+      {/* Edit Resource Dialog */}
+      <Dialog open={openEditDialog} onClose={handleEditDialogClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit Resource</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Title"
+            margin="normal"
+            value={editResourceTitle}
+            onChange={(e) => setEditResourceTitle(e.target.value)}
+            error={!!editResourceTitleError}
+            helperText={editResourceTitleError}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Resource Type</InputLabel>
+            <Select
+              value={editResourceType}
+              onChange={(e) => setEditResourceType(e.target.value)}
+              label="Resource Type"
+            >
+              {resourceTypes.map((type) => (
+                <MenuItem key={type} value={type}>
+                  {type}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Category</InputLabel>
+            <Select
+              value={editResourceCategory}
+              onChange={(e) => setEditResourceCategory(e.target.value)}
+              label="Category"
+            >
+              {resourceCategories.map((category) => (
+                <MenuItem key={category} value={category}>
+                  {category}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            fullWidth
+            label="URL"
+            margin="normal"
+            value={editResourceUrl}
+            onChange={(e) => setEditResourceUrl(e.target.value)}
+            error={!!editResourceUrlError}
+            helperText={editResourceUrlError}
+          />
+          <TextField
+            fullWidth
+            label="Description"
+            margin="normal"
+            multiline
+            rows={3}
+            value={editResourceDescription}
+            onChange={(e) => setEditResourceDescription(e.target.value)}
+            error={!!editResourceDescriptionError}
+            helperText={editResourceDescriptionError}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditDialogClose}>Cancel</Button>
+          <Button onClick={handleEditResourceSubmit} variant="contained" color="primary">
+            Save Changes
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };
