@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Box,
   Container,
@@ -14,6 +14,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+    Button,
 } from '@mui/material';
 import {
   Accessibility as AccessibilityIcon,
@@ -27,54 +28,53 @@ interface AccessibilitySettings {
   textSize: number;
   screenReader: boolean;
   voiceControl: boolean;
+    fontFamily: string;
 }
 
-const initialAccessibilitySettings: AccessibilitySettings = {
-  highContrast: false,
-  textSize: 16,
-  screenReader: false,
-  voiceControl: false,
-};
+const fontFamilies = ['Roboto', 'Arial', 'Helvetica'];
 
-const Accessibility: React.FC = () => {
-  const [accessibilitySettings, setAccessibilitySettings] = useState(
-    initialAccessibilitySettings
-  );
+interface AccessibilityProps {
+    accessibilitySettings: AccessibilitySettings;
+    setAccessibilitySettings: (settings: AccessibilitySettings) => void;
+}
 
-  const handleToggleChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
+const Accessibility: React.FC<AccessibilityProps> = ({ accessibilitySettings, setAccessibilitySettings }) => {
+
+		const handleToggleChange = (
+				event: React.ChangeEvent<HTMLInputElement>,
     key: keyof AccessibilitySettings
   ) => {
-    setAccessibilitySettings({
-      ...accessibilitySettings,
-      [key]: event.target.checked,
-    });
+      setAccessibilitySettings({
+										...accessibilitySettings,
+          [key]: event.target.checked,
+      });
   };
 
   const handleSliderChange = (
     event: Event,
     newValue: number | number[]
   ) => {
-    setAccessibilitySettings({
-      ...accessibilitySettings,
-      textSize: newValue as number,
-    });
+      setAccessibilitySettings({
+										...accessibilitySettings,
+          textSize: newValue as number,
+      });
   };
 
-  const handleFontChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    key: keyof AccessibilitySettings
-  ) => {
-    setAccessibilitySettings({ ...accessibilitySettings, [key]: event.target.value });
-  };
+    const handleFontFamilyChange = (event: any) => {
+        setAccessibilitySettings({ ...accessibilitySettings, fontFamily: event.target.value });
+    };
+
+    const handleApplySettings = () => {
+								setAccessibilitySettings(accessibilitySettings);
+    };
 
   return (
-    <Container maxWidth="lg">
+				<Container maxWidth="lg">
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" component="h1" gutterBottom>
           Accessibility Features
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+								<Typography variant="subtitle1" color="text.secondary">
           Customize the app for diverse client needs
         </Typography>
       </Box>
@@ -85,7 +85,7 @@ const Accessibility: React.FC = () => {
             <CardContent>
               <Box
                 sx={{
-                  display: 'flex',
+																		display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   mb: 2,
@@ -116,6 +116,23 @@ const Accessibility: React.FC = () => {
                   aria-label="Text Size"
                 />
               </Box>
+                <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2">Font Family</Typography>
+                    <FormControl fullWidth>
+                        <InputLabel>Font</InputLabel>
+                        <Select
+                            value={accessibilitySettings.fontFamily}
+                            onChange={handleFontFamilyChange}
+                            label="Font"
+                        >
+                            {fontFamilies.map((font) => (
+                                <MenuItem key={font} value={font}>
+                                    {font}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </Box>
             </CardContent>
           </Card>
         </Grid>
@@ -126,7 +143,7 @@ const Accessibility: React.FC = () => {
               <Box
                 sx={{
                   display: 'flex',
-                  justifyContent: 'space-between',
+																		justifyContent: 'space-between',
                   alignItems: 'center',
                   mb: 2,
                 }}
@@ -157,6 +174,13 @@ const Accessibility: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+          <Grid item xs={12}>
+              <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  <Button variant="contained" onClick={handleApplySettings}>
+                      Apply Settings
+                  </Button>
+              </Box>
+          </Grid>
       </Grid>
     </Container>
   );

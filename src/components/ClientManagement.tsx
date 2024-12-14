@@ -100,18 +100,128 @@ const mockClients: Client[] = [
   },
 ];
 
+const riskProfiles = ['Conservative', 'Moderate', 'Aggressive'];
+const clientSegments = ['High Value', 'Mid Tier', 'Growth Potential'];
+
 const ClientManagement: React.FC = () => {
+  const [clients, setClients] = useState<Client[]>(mockClients);
   const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openGoalDialog, setOpenGoalDialog] = useState(false);
+  const [openAddClientDialog, setOpenAddClientDialog] = useState(false);
+  const [openEditClientDialog, setOpenEditClientDialog] = useState(false);
+  const [newClientName, setNewClientName] = useState('');
+  const [newClientEmail, setNewClientEmail] = useState('');
+  const [newClientAum, setNewClientAum] = useState('');
+  const [newClientRiskProfile, setNewClientRiskProfile] = useState(riskProfiles[0]);
+  const [newClientSegment, setNewClientSegment] = useState(clientSegments[0]);
+  const [newGoalName, setNewGoalName] = useState('');
+  const [newGoalTarget, setNewGoalTarget] = useState('');
+  const [newGoalDeadline, setNewGoalDeadline] = useState('');
+  const [editClientName, setEditClientName] = useState('');
+  const [editClientEmail, setEditClientEmail] = useState('');
+  const [editClientAum, setEditClientAum] = useState('');
+  const [editClientRiskProfile, setEditClientRiskProfile] = useState('');
+  const [editClientSegment, setEditClientSegment] = useState('');
 
   const handleClientClick = (client: Client) => {
     setSelectedClient(client);
     setOpenDialog(true);
   };
 
-  const handleAddGoal = () => {
+  const handleAddGoalOpen = () => {
     setOpenGoalDialog(true);
+  };
+
+  const handleAddGoalClose = () => {
+    setOpenGoalDialog(false);
+    resetAddGoalForm();
+  };
+
+  const resetAddGoalForm = () => {
+    setNewGoalName('');
+    setNewGoalTarget('');
+    setNewGoalDeadline('');
+  };
+
+  const handleAddGoalSubmit = () => {
+    if (selectedClient) {
+      const newGoal: Goal = {
+        id: selectedClient.goals.length + 1,
+        name: newGoalName,
+        target: parseFloat(newGoalTarget),
+        current: 0,
+        deadline: newGoalDeadline,
+      };
+      const updatedClient = { ...selectedClient, goals: [...selectedClient.goals, newGoal] };
+      setClients(clients.map(client => client.id === selectedClient.id ? updatedClient : client));
+      setSelectedClient(updatedClient);
+      handleAddGoalClose();
+    }
+  };
+
+    const handleEditClientOpen = () => {
+        if (selectedClient) {
+            setEditClientName(selectedClient.name);
+            setEditClientEmail(selectedClient.email);
+            setEditClientAum(selectedClient.aum.toString());
+            setEditClientRiskProfile(selectedClient.riskProfile);
+            setEditClientSegment(selectedClient.segment);
+            setOpenEditClientDialog(true);
+        }
+    };
+
+    const handleEditClientClose = () => {
+        setOpenEditClientDialog(false);
+    };
+
+    const handleEditClientSubmit = () => {
+        if (selectedClient) {
+            const updatedClient = {
+                ...selectedClient,
+                name: editClientName,
+                email: editClientEmail,
+                aum: parseFloat(editClientAum),
+                riskProfile: editClientRiskProfile,
+                segment: editClientSegment as 'High Value' | 'Mid Tier' | 'Growth Potential',
+            };
+            setClients(clients.map(client => client.id === selectedClient.id ? updatedClient : client));
+            setSelectedClient(updatedClient);
+            handleEditClientClose();
+            setOpenDialog(false);
+        }
+    };
+
+
+  const handleAddClientOpen = () => {
+    setOpenAddClientDialog(true);
+  };
+
+  const handleAddClientClose = () => {
+    setOpenAddClientDialog(false);
+    resetAddClientForm();
+  };
+
+  const resetAddClientForm = () => {
+    setNewClientName('');
+    setNewClientEmail('');
+    setNewClientAum('');
+    setNewClientRiskProfile(riskProfiles[0]);
+    setNewClientSegment(clientSegments[0]);
+  };
+
+  const handleAddClientSubmit = () => {
+    const newClient: Client = {
+      id: clients.length + 1,
+      name: newClientName,
+      email: newClientEmail,
+      aum: parseFloat(newClientAum),
+      riskProfile: newClientRiskProfile,
+      segment: newClientSegment as 'High Value' | 'Mid Tier' | 'Growth Potential',
+      goals: [],
+    };
+    setClients([...clients, newClient]);
+    handleAddClientClose();
   };
 
   const getSegmentColor = (segment: string) => {
@@ -152,6 +262,7 @@ const ClientManagement: React.FC = () => {
                   variant="contained"
                   startIcon={<Add />}
                   color="primary"
+                  onClick={handleAddClientOpen}
                 >
                   Add Client
                 </Button>
@@ -169,7 +280,7 @@ const ClientManagement: React.FC = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {mockClients.map((client) => (
+                    {clients.map((client) => (
                       <TableRow key={client.id}>
                         <TableCell>{client.name}</TableCell>
                         <TableCell>{client.email}</TableCell>
@@ -253,7 +364,7 @@ const ClientManagement: React.FC = () => {
                         <Button
                           size="small"
                           startIcon={<Add />}
-                          onClick={handleAddGoal}
+                          onClick={handleAddGoalOpen}
                         >
                           Add Goal
                         </Button>
@@ -288,7 +399,7 @@ const ClientManagement: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setOpenDialog(false)}>Close</Button>
-              <Button variant="contained" startIcon={<Edit />}>
+              <Button variant="contained" startIcon={<Edit />} onClick={handleEditClientOpen}>
                 Edit Profile
               </Button>
             </DialogActions>
@@ -296,10 +407,73 @@ const ClientManagement: React.FC = () => {
         )}
       </Dialog>
 
+        {/* Edit Client Dialog */}
+        <Dialog open={openEditClientDialog} onClose={handleEditClientClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Edit Client Profile</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Client Name"
+                    margin="normal"
+                    value={editClientName}
+                    onChange={(e) => setEditClientName(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Email"
+                    margin="normal"
+                    value={editClientEmail}
+                    onChange={(e) => setEditClientEmail(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Assets Under Management"
+                    type="number"
+                    margin="normal"
+                    value={editClientAum}
+                    onChange={(e) => setEditClientAum(e.target.value)}
+                />
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Risk Profile</InputLabel>
+                    <Select
+                        value={editClientRiskProfile}
+                        onChange={(e) => setEditClientRiskProfile(e.target.value)}
+                        label="Risk Profile"
+                    >
+                        {riskProfiles.map((profile) => (
+                            <MenuItem key={profile} value={profile}>
+                                {profile}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Client Segment</InputLabel>
+                    <Select
+                        value={editClientSegment}
+                        onChange={(e) => setEditClientSegment(e.target.value)}
+                        label="Client Segment"
+                    >
+                        {clientSegments.map((segment) => (
+                            <MenuItem key={segment} value={segment}>
+                                {segment}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleEditClientClose}>Cancel</Button>
+                <Button onClick={handleEditClientSubmit} variant="contained" color="primary">
+                    Save
+                </Button>
+            </DialogActions>
+        </Dialog>
+
       {/* Add Goal Dialog */}
       <Dialog
         open={openGoalDialog}
-        onClose={() => setOpenGoalDialog(false)}
+        onClose={handleAddGoalClose}
         maxWidth="sm"
         fullWidth
       >
@@ -309,12 +483,16 @@ const ClientManagement: React.FC = () => {
             fullWidth
             label="Goal Name"
             margin="normal"
+            value={newGoalName}
+            onChange={(e) => setNewGoalName(e.target.value)}
           />
           <TextField
             fullWidth
             label="Target Amount"
             type="number"
             margin="normal"
+            value={newGoalTarget}
+            onChange={(e) => setNewGoalTarget(e.target.value)}
           />
           <TextField
             fullWidth
@@ -322,12 +500,82 @@ const ClientManagement: React.FC = () => {
             type="date"
             InputLabelProps={{ shrink: true }}
             margin="normal"
+            value={newGoalDeadline}
+            onChange={(e) => setNewGoalDeadline(e.target.value)}
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenGoalDialog(false)}>Cancel</Button>
-          <Button variant="contained" color="primary">
+          <Button onClick={handleAddGoalClose}>Cancel</Button>
+          <Button onClick={handleAddGoalSubmit} variant="contained" color="primary">
             Add Goal
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Client Dialog */}
+      <Dialog
+        open={openAddClientDialog}
+        onClose={handleAddClientClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Add New Client</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Client Name"
+            margin="normal"
+            value={newClientName}
+            onChange={(e) => setNewClientName(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            label="Email"
+            margin="normal"
+            value={newClientEmail}
+            onChange={(e) => setNewClientEmail(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            label="Assets Under Management"
+            type="number"
+            margin="normal"
+            value={newClientAum}
+            onChange={(e) => setNewClientAum(e.target.value)}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Risk Profile</InputLabel>
+            <Select
+              value={newClientRiskProfile}
+              onChange={(e) => setNewClientRiskProfile(e.target.value)}
+              label="Risk Profile"
+            >
+              {riskProfiles.map((profile) => (
+                <MenuItem key={profile} value={profile}>
+                  {profile}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Client Segment</InputLabel>
+            <Select
+              value={newClientSegment}
+              onChange={(e) => setNewClientSegment(e.target.value)}
+              label="Client Segment"
+            >
+              {clientSegments.map((segment) => (
+                <MenuItem key={segment} value={segment}>
+                  {segment}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAddClientClose}>Cancel</Button>
+          <Button onClick={handleAddClientSubmit} variant="contained" color="primary">
+            Add Client
           </Button>
         </DialogActions>
       </Dialog>

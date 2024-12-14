@@ -1,6 +1,10 @@
+body {
+  font-family: "Roboto", "Helvetica", "Arial", sans-serif;
+  font-size: 16px;
+}
+
 .app {
-  font-family: sans-serif;
-  text-align: center;
+		text-align: center;
 }
 
 .communication-hub,

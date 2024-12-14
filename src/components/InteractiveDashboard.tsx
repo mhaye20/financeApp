@@ -18,15 +18,18 @@ import {
   MenuItem,
   IconButton,
   Tooltip,
+  Alert,
+  Snackbar,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   TrendingUp,
   AccountBalance,
   Settings,
   Calculate,
-  Notifications,
-  Add,
-  Edit,
+  ShowChart,
+  PieChart,
 } from '@mui/icons-material';
 import {
   Chart as ChartJS,
@@ -37,8 +40,9 @@ import {
   Title,
   Tooltip as ChartTooltip,
   Legend,
+  ArcElement,
 } from 'chart.js';
-import { Line } from 'react-chartjs-2';
+import { Line, Pie } from 'react-chartjs-2';
 
 ChartJS.register(
   CategoryScale,
@@ -47,8 +51,27 @@ ChartJS.register(
   LineElement,
   Title,
   ChartTooltip,
-  Legend
+  Legend,
+  ArcElement
 );
+
+const calculateCompoundInterest = (
+  principal: number,
+  monthlyContribution: number,
+  years: number,
+  rate: number
+): number => {
+  const r = rate / 100 / 12;
+  const n = years * 12;
+  const futureValuePrincipal = principal * Math.pow(1 + r, n);
+  const futureValueContributions =
+    monthlyContribution * ((Math.pow(1 + r, n) - 1) / r);
+  return futureValuePrincipal + futureValueContributions;
+};
+
+const calculateTaxLiability = (income: number, taxRate: number): number => {
+  return (income * taxRate) / 100;
+};
 
 const mockPortfolioData = {
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
@@ -58,6 +81,23 @@ const mockPortfolioData = {
       data: [100000, 105000, 110000, 115000, 120000, 125000],
       borderColor: 'rgb(75, 192, 192)',
       tension: 0.1,
+      fill: true,
+      backgroundColor: 'rgba(75, 192, 192, 0.1)',
+    },
+  ],
+};
+
+const mockAllocationData = {
+  labels: ['Stocks', 'Bonds', 'Real Estate', 'Cash'],
+  datasets: [
+    {
+      data: [45, 30, 15, 10],
+      backgroundColor: [
+        'rgba(75, 192, 192, 0.8)',
+        'rgba(54, 162, 235, 0.8)',
+        'rgba(255, 206, 86, 0.8)',
+        'rgba(153, 102, 255, 0.8)',
+      ],
     },
   ],
 };
@@ -68,12 +108,21 @@ const mockAlerts = [
     type: 'Market Change',
     message: 'S&P 500 is down by 2%',
     timestamp: '10:00 AM',
+    severity: 'warning',
   },
   {
     id: 2,
     type: 'Investment Opportunity',
     message: 'New tech stock with high growth potential',
     timestamp: '11:30 AM',
+    severity: 'info',
+  },
+  {
+    id: 3,
+    type: 'Portfolio Alert',
+    message: 'Your portfolio has exceeded target allocation',
+    timestamp: '12:45 PM',
+    severity: 'error',
   },
 ];
 
@@ -81,11 +130,24 @@ const InteractiveDashboard: React.FC = () => {
   const [openCalculator, setOpenCalculator] = useState(false);
   const [openSettings, setOpenSettings] = useState(false);
   const [calculatorType, setCalculatorType] = useState('retirement');
-  const [retirementAge, setRetirementAge] = useState('');
-  const [currentSavings, setCurrentSavings] = useState('');
-  const [monthlyContribution, setMonthlyContribution] = useState('');
-  const [taxRate, setTaxRate] = useState('');
-  const [investmentReturn, setInvestmentReturn] = useState('');
+  const [retirementAge, setRetirementAge] = useState('65');
+  const [currentAge, setCurrentAge] = useState('30');
+  const [currentSavings, setCurrentSavings] = useState('50000');
+  const [monthlyContribution, setMonthlyContribution] = useState('1000');
+  const [taxRate, setTaxRate] = useState('25');
+  const [investmentReturn, setInvestmentReturn] = useState('7');
+  const [calculationResult, setCalculationResult] = useState<number | null>(null);
+  const [showSnackbar, setShowSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState('');
+  const [chartType, setChartType] = useState<'line' | 'pie'>('line');
+  const [showRealTimeUpdates, setShowRealTimeUpdates] = useState(true);
+    const [currentAgeError, setCurrentAgeError] = useState('');
+    const [retirementAgeError, setRetirementAgeError] = useState('');
+    const [currentSavingsError, setCurrentSavingsError] = useState('');
+    const [monthlyContributionError, setMonthlyContributionError] = useState('');
+    const [investmentReturnError, setInvestmentReturnError] = useState('');
+    const [taxRateError, setTaxRateError] = useState('');
+
 
   const handleCalculatorOpen = () => {
     setOpenCalculator(true);
@@ -93,7 +155,24 @@ const InteractiveDashboard: React.FC = () => {
 
   const handleCalculatorClose = () => {
     setOpenCalculator(false);
+    setCalculationResult(null);
+      resetCalculatorForm();
   };
+
+    const resetCalculatorForm = () => {
+        setCurrentAge('30');
+        setRetirementAge('65');
+        setCurrentSavings('50000');
+        setMonthlyContribution('1000');
+        setTaxRate('25');
+        setInvestmentReturn('7');
+        setCurrentAgeError('');
+        setRetirementAgeError('');
+        setCurrentSavingsError('');
+        setMonthlyContributionError('');
+        setInvestmentReturnError('');
+        setTaxRateError('');
+    };
 
   const handleSettingsOpen = () => {
     setOpenSettings(true);
@@ -103,17 +182,110 @@ const InteractiveDashboard: React.FC = () => {
     setOpenSettings(false);
   };
 
+    const validateCalculatorInputs = () => {
+        let isValid = true;
+
+        if (calculatorType === 'retirement') {
+            if (!currentAge || isNaN(Number(currentAge)) || Number(currentAge) < 0 || Number(currentAge) > 100) {
+                setCurrentAgeError('Please enter a valid current age (0-100)');
+                isValid = false;
+            } else {
+                setCurrentAgeError('');
+            }
+
+            if (!retirementAge || isNaN(Number(retirementAge)) || Number(retirementAge) < 0 || Number(retirementAge) > 100) {
+                setRetirementAgeError('Please enter a valid retirement age (0-100)');
+                isValid = false;
+            } else {
+                setRetirementAgeError('');
+            }
+
+            if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
+                setCurrentSavingsError('Please enter a valid current savings amount');
+                isValid = false;
+            } else {
+                setCurrentSavingsError('');
+            }
+
+            if (!monthlyContribution || isNaN(Number(monthlyContribution)) || Number(monthlyContribution) < 0) {
+                setMonthlyContributionError('Please enter a valid monthly contribution amount');
+                isValid = false;
+            } else {
+                setMonthlyContributionError('');
+            }
+
+            if (!investmentReturn || isNaN(Number(investmentReturn)) || Number(investmentReturn) < 0 || Number(investmentReturn) > 100) {
+                setInvestmentReturnError('Please enter a valid investment return (0-100)');
+                isValid = false;
+            } else {
+                setInvestmentReturnError('');
+            }
+        } else {
+            if (!currentSavings || isNaN(Number(currentSavings)) || Number(currentSavings) < 0) {
+                setCurrentSavingsError('Please enter a valid annual income');
+                isValid = false;
+            } else {
+                setCurrentSavingsError('');
+            }
+
+            if (!taxRate || isNaN(Number(taxRate)) || Number(taxRate) < 0 || Number(taxRate) > 100) {
+                setTaxRateError('Please enter a valid tax rate (0-100)');
+                isValid = false;
+            } else {
+                setTaxRateError('');
+            }
+        }
+
+        return isValid;
+    };
+
+
   const handleCalculatorSubmit = () => {
-    // Handle calculator logic here
-    console.log('Calculator submitted:', {
-      calculatorType,
-      retirementAge,
-      currentSavings,
-      monthlyContribution,
-      taxRate,
-      investmentReturn,
-    });
-    handleCalculatorClose();
+      if (!validateCalculatorInputs()) {
+          setSnackbarMessage('Please correct the errors in the form.');
+          setShowSnackbar(true);
+          return;
+      }
+    try {
+      let result: number;
+      if (calculatorType === 'retirement') {
+        const years = parseInt(retirementAge) - parseInt(currentAge);
+        result = calculateCompoundInterest(
+          parseFloat(currentSavings),
+          parseFloat(monthlyContribution),
+          years,
+          parseFloat(investmentReturn)
+        );
+      } else {
+        result = calculateTaxLiability(
+          parseFloat(currentSavings),
+          parseFloat(taxRate)
+        );
+      }
+      setCalculationResult(result);
+      setSnackbarMessage('Calculation completed successfully!');
+      setShowSnackbar(true);
+    } catch (error) {
+      setSnackbarMessage('Error in calculation. Please check your inputs.');
+      setShowSnackbar(true);
+    }
+  };
+
+  const handleChartTypeChange = () => {
+    setChartType(chartType === 'line' ? 'pie' : 'line');
+  };
+
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: {
+        position: 'top' as const,
+      },
+      title: {
+        display: true,
+        text: chartType === 'line' ? 'Portfolio Performance' : 'Asset Allocation',
+      },
+    },
   };
 
   return (
@@ -139,14 +311,25 @@ const InteractiveDashboard: React.FC = () => {
                   mb: 2,
                 }}
               >
-                <Typography variant="h6">Portfolio Performance</Typography>
-                <Tooltip title="View Settings">
-                  <IconButton onClick={handleSettingsOpen}>
-                    <Settings />
-                  </IconButton>
-                </Tooltip>
+                <Typography variant="h6">Portfolio Overview</Typography>
+                <Box>
+                  <Tooltip title="Toggle Chart Type">
+                    <IconButton onClick={handleChartTypeChange}>
+                      {chartType === 'line' ? <PieChart /> : <ShowChart />}
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="View Settings">
+                    <IconButton onClick={handleSettingsOpen}>
+                      <Settings />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
               </Box>
-              <Line data={mockPortfolioData} />
+              {chartType === 'line' ? (
+                <Line data={mockPortfolioData} options={chartOptions} />
+              ) : (
+                <Pie data={mockAllocationData} options={chartOptions} />
+              )}
             </CardContent>
           </Card>
         </Grid>
@@ -158,20 +341,17 @@ const InteractiveDashboard: React.FC = () => {
                 Alerts & Notifications
               </Typography>
               {mockAlerts.map((alert) => (
-                <Box
+                <Alert
                   key={alert.id}
-                  sx={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    mb: 1,
-                  }}
+                  severity={alert.severity as 'error' | 'warning' | 'info' | 'success'}
+                  sx={{ mb: 1 }}
                 >
+                  <Typography variant="subtitle2">{alert.type}</Typography>
                   <Typography variant="body2">{alert.message}</Typography>
                   <Typography variant="caption" color="text.secondary">
                     {alert.timestamp}
                   </Typography>
-                </Box>
+                </Alert>
               ))}
             </CardContent>
           </Card>
@@ -209,6 +389,14 @@ const InteractiveDashboard: React.FC = () => {
                       borderRadius: 2,
                       boxShadow: 1,
                       gap: 1,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                      },
+                    }}
+                    onClick={() => {
+                      setCalculatorType('retirement');
+                      handleCalculatorOpen();
                     }}
                   >
                     <AccountBalance color="primary" />
@@ -226,6 +414,14 @@ const InteractiveDashboard: React.FC = () => {
                       borderRadius: 2,
                       boxShadow: 1,
                       gap: 1,
+                      cursor: 'pointer',
+                      '&:hover': {
+                        bgcolor: 'action.hover',
+                      },
+                    }}
+                    onClick={() => {
+                      setCalculatorType('tax');
+                      handleCalculatorOpen();
                     }}
                   >
                     <TrendingUp color="primary" />
@@ -239,8 +435,17 @@ const InteractiveDashboard: React.FC = () => {
       </Grid>
 
       {/* Calculator Dialog */}
-      <Dialog open={openCalculator} onClose={handleCalculatorClose}>
-        <DialogTitle>Financial Calculator</DialogTitle>
+      <Dialog
+        open={openCalculator}
+        onClose={handleCalculatorClose}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {calculatorType === 'retirement'
+            ? 'Retirement Calculator'
+            : 'Tax Strategy Planner'}
+        </DialogTitle>
         <DialogContent>
           <FormControl fullWidth margin="normal">
             <InputLabel>Calculator Type</InputLabel>
@@ -253,8 +458,19 @@ const InteractiveDashboard: React.FC = () => {
               <MenuItem value="tax">Tax Strategy Planner</MenuItem>
             </Select>
           </FormControl>
-          {calculatorType === 'retirement' && (
+          {calculatorType === 'retirement' ? (
             <>
+              <TextField
+                fullWidth
+                label="Current Age"
+                type="number"
+                margin="normal"
+                value={currentAge}
+                onChange={(e) => setCurrentAge(e.target.value)}
+                  InputProps={{ inputProps: { min: 0, max: 100 } }}
+                  error={!!currentAgeError}
+                  helperText={currentAgeError}
+              />
               <TextField
                 fullWidth
                 label="Retirement Age"
@@ -262,6 +478,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={retirementAge}
                 onChange={(e) => setRetirementAge(e.target.value)}
+                  InputProps={{ inputProps: { min: 0, max: 100 } }}
+                  error={!!retirementAgeError}
+                  helperText={retirementAgeError}
               />
               <TextField
                 fullWidth
@@ -270,6 +489,9 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={currentSavings}
                 onChange={(e) => setCurrentSavings(e.target.value)}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  error={!!currentSavingsError}
+                  helperText={currentSavingsError}
               />
               <TextField
                 fullWidth
@@ -278,26 +500,62 @@ const InteractiveDashboard: React.FC = () => {
                 margin="normal"
                 value={monthlyContribution}
                 onChange={(e) => setMonthlyContribution(e.target.value)}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  error={!!monthlyContributionError}
+                  helperText={monthlyContributionError}
               />
               <TextField
                 fullWidth
-                label="Expected Investment Return"
+                label="Expected Investment Return (%)"
                 type="number"
                 margin="normal"
                 value={investmentReturn}
                 onChange={(e) => setInvestmentReturn(e.target.value)}
+                  InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
+                  error={!!investmentReturnError}
+                  helperText={investmentReturnError}
+              />
+            </>
+          ) : (
+            <>
+              <TextField
+                fullWidth
+                label="Annual Income"
+                type="number"
+                margin="normal"
+                value={currentSavings}
+                onChange={(e) => setCurrentSavings(e.target.value)}
+                  InputProps={{ inputProps: { min: 0 } }}
+                  error={!!currentSavingsError}
+                  helperText={currentSavingsError}
+              />
+              <TextField
+                fullWidth
+                label="Tax Rate (%)"
+                type="number"
+                margin="normal"
+                value={taxRate}
+                onChange={(e) => setTaxRate(e.target.value)}
+                  InputProps={{ inputProps: { min: 0, max: 100, step: 0.1 } }}
+                  error={!!taxRateError}
+                  helperText={taxRateError}
               />
             </>
           )}
-          {calculatorType === 'tax' && (
-            <TextField
-              fullWidth
-              label="Tax Rate"
-              type="number"
-              margin="normal"
-              value={taxRate}
-              onChange={(e) => setTaxRate(e.target.value)}
-            />
+          {calculationResult !== null && (
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="subtitle1">
+                {calculatorType === 'retirement'
+                  ? 'Estimated Retirement Savings:'
+                  : 'Estimated Tax Liability:'}
+              </Typography>
+              <Typography variant="h6">
+                ${(calculationResult || 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                })}
+              </Typography>
+            </Alert>
           )}
         </DialogContent>
         <DialogActions>
@@ -312,13 +570,32 @@ const InteractiveDashboard: React.FC = () => {
       <Dialog open={openSettings} onClose={handleSettingsClose}>
         <DialogTitle>Dashboard Settings</DialogTitle>
         <DialogContent>
-          <Typography>Customize your dashboard settings here.</Typography>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={showRealTimeUpdates}
+                onChange={(e) => setShowRealTimeUpdates(e.target.checked)}
+              />
+            }
+            label="Enable Real-time Updates"
+          />
+          {/* Add more settings as needed */}
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleSettingsClose}>Close</Button>
-          <Button variant="contained">Save Settings</Button>
+          <Button onClick={handleSettingsClose}>Cancel</Button>
+          <Button onClick={handleSettingsClose} variant="contained">
+            Save Settings
+          </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={showSnackbar}
+        autoHideDuration={6000}
+        onClose={() => setShowSnackbar(false)}
+        message={snackbarMessage}
+      />
     </Container>
   );
 };

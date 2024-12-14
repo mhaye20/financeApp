@@ -19,6 +19,10 @@ import {
   DialogActions,
   IconButton,
   Tooltip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import {
   Share,
@@ -54,9 +58,22 @@ const mockReferrals: Referral[] = [
   },
 ];
 
+const referralStatuses = ['pending', 'completed'];
+
 const ReferralSystem: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedReferral, setSelectedReferral] = useState<Referral | null>(null);
+    const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [openAddDialog, setOpenAddDialog] = useState(false);
+  const [newReferrer, setNewReferrer] = useState('');
+  const [newReferred, setNewReferred] = useState('');
+  const [newReferralDate, setNewReferralDate] = useState('');
+  const [newReferralStatus, setNewReferralStatus] = useState(referralStatuses[0]);
+    const [editReferrer, setEditReferrer] = useState('');
+    const [editReferred, setEditReferred] = useState('');
+    const [editReferralDate, setEditReferralDate] = useState('');
+    const [editReferralStatus, setEditReferralStatus] = useState(referralStatuses[0]);
+  const [referrals, setReferrals] = useState<Referral[]>(mockReferrals);
 
   const handleReferralClick = (referral: Referral) => {
     setSelectedReferral(referral);
@@ -68,19 +85,68 @@ const ReferralSystem: React.FC = () => {
     setSelectedReferral(null);
   };
 
-  const handleAddReferral = () => {
-    // Handle add referral logic here
-    console.log('Add referral');
+    const handleEditDialogClose = () => {
+        setOpenEditDialog(false);
+        setSelectedReferral(null);
+    };
+
+  const handleAddReferralOpen = () => {
+    setOpenAddDialog(true);
   };
 
-  const handleEditReferral = () => {
-    // Handle edit referral logic here
-    console.log('Edit referral');
+  const handleAddReferralClose = () => {
+    setOpenAddDialog(false);
+    resetAddReferralForm();
   };
+
+  const resetAddReferralForm = () => {
+    setNewReferrer('');
+    setNewReferred('');
+    setNewReferralDate('');
+    setNewReferralStatus(referralStatuses[0]);
+  };
+
+  const handleAddReferralSubmit = () => {
+    const newReferral: Referral = {
+      id: referrals.length + 1,
+      referrer: newReferrer,
+      referred: newReferred,
+      date: newReferralDate,
+      status: newReferralStatus as 'pending' | 'completed',
+    };
+    setReferrals([...referrals, newReferral]);
+    handleAddReferralClose();
+  };
+
+    const handleEditReferralOpen = (referral: Referral) => {
+        setSelectedReferral(referral);
+        setEditReferrer(referral.referrer);
+        setEditReferred(referral.referred);
+        setEditReferralDate(referral.date);
+        setEditReferralStatus(referral.status);
+        setOpenEditDialog(true);
+    };
+
+    const handleEditReferralSubmit = () => {
+        if (selectedReferral) {
+            const updatedReferral = {
+                ...selectedReferral,
+                referrer: editReferrer,
+                referred: editReferred,
+                date: editReferralDate,
+                status: editReferralStatus as 'pending' | 'completed',
+            };
+            setReferrals(referrals.map(referral => referral.id === selectedReferral.id ? updatedReferral : referral));
+            handleEditDialogClose();
+        }
+    };
 
   const handleDeleteReferral = () => {
-    // Handle delete referral logic here
-    console.log('Delete referral');
+      if (selectedReferral) {
+          const updatedReferrals = referrals.filter(referral => referral.id !== selectedReferral.id);
+          setReferrals(updatedReferrals);
+          handleDialogClose();
+      }
   };
 
   return (
@@ -99,7 +165,7 @@ const ReferralSystem: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<PersonAdd />}
-          onClick={handleAddReferral}
+          onClick={handleAddReferralOpen}
         >
           Add Referral
         </Button>
@@ -110,7 +176,7 @@ const ReferralSystem: React.FC = () => {
           <Card>
             <CardContent>
               <List>
-                {mockReferrals.map((referral) => (
+                {referrals.map((referral) => (
                   <ListItem
                     key={referral.id}
                     alignItems="flex-start"
@@ -199,7 +265,7 @@ const ReferralSystem: React.FC = () => {
             </DialogContent>
             <DialogActions>
               <Button onClick={handleDialogClose}>Close</Button>
-              <Button variant="contained" startIcon={<Edit />} onClick={handleEditReferral}>
+              <Button variant="contained" startIcon={<Edit />} onClick={() => handleEditReferralOpen(selectedReferral)}>
                 Edit
               </Button>
               <Button variant="outlined" color="error" startIcon={<Delete />} onClick={handleDeleteReferral}>
@@ -209,6 +275,106 @@ const ReferralSystem: React.FC = () => {
           </>
         )}
       </Dialog>
+
+      {/* Add Referral Dialog */}
+      <Dialog open={openAddDialog} onClose={handleAddReferralClose} maxWidth="sm" fullWidth>
+        <DialogTitle>Add New Referral</DialogTitle>
+        <DialogContent>
+          <TextField
+            fullWidth
+            label="Referrer Name"
+            margin="normal"
+            value={newReferrer}
+            onChange={(e) => setNewReferrer(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            label="Referred Name"
+            margin="normal"
+            value={newReferred}
+            onChange={(e) => setNewReferred(e.target.value)}
+          />
+          <TextField
+            fullWidth
+            label="Referral Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            margin="normal"
+            value={newReferralDate}
+            onChange={(e) => setNewReferralDate(e.target.value)}
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Referral Status</InputLabel>
+            <Select
+              value={newReferralStatus}
+              onChange={(e) => setNewReferralStatus(e.target.value)}
+              label="Referral Status"
+            >
+              {referralStatuses.map((status) => (
+                <MenuItem key={status} value={status}>
+                  {status}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleAddReferralClose}>Cancel</Button>
+          <Button onClick={handleAddReferralSubmit} variant="contained" color="primary">
+            Add Referral
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+        {/* Edit Referral Dialog */}
+        <Dialog open={openEditDialog} onClose={handleEditDialogClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Edit Referral</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Referrer Name"
+                    margin="normal"
+                    value={editReferrer}
+                    onChange={(e) => setEditReferrer(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Referred Name"
+                    margin="normal"
+                    value={editReferred}
+                    onChange={(e) => setEditReferred(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Referral Date"
+                    type="date"
+                    InputLabelProps={{ shrink: true }}
+                    margin="normal"
+                    value={editReferralDate}
+                    onChange={(e) => setEditReferralDate(e.target.value)}
+                />
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Referral Status</InputLabel>
+                    <Select
+                        value={editReferralStatus}
+                        onChange={(e) => setEditReferralStatus(e.target.value)}
+                        label="Referral Status"
+                    >
+                        {referralStatuses.map((status) => (
+                            <MenuItem key={status} value={status}>
+                                {status}
+                            </MenuItem>
+                        ))}
+                    </Select>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleEditDialogClose}>Cancel</Button>
+                <Button onClick={handleEditReferralSubmit} variant="contained" color="primary">
+                    Save Changes
+                </Button>
+            </DialogActions>
+        </Dialog>
     </Container>
   );
 };

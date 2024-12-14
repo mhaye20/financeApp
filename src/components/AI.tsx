@@ -27,6 +27,7 @@ import {
   Send,
   Edit,
   Delete,
+    Add as AddIcon,
 } from '@mui/icons-material';
 
 interface ChatMessage {
@@ -34,6 +35,12 @@ interface ChatMessage {
   sender: 'user' | 'bot';
   text: string;
   timestamp: string;
+}
+
+interface Suggestion {
+    id: number;
+    title: string;
+    description: string;
 }
 
 const mockChatMessages: ChatMessage[] = [
@@ -57,7 +64,7 @@ const mockChatMessages: ChatMessage[] = [
   },
 ];
 
-const mockSuggestions = [
+const mockSuggestions: Suggestion[] = [
   {
     id: 1,
     title: 'Recommended Resources',
@@ -72,11 +79,18 @@ const mockSuggestions = [
 
 const AI: React.FC = () => {
   const [openDialog, setOpenDialog] = useState(false);
-  const [selectedSuggestion, setSelectedSuggestion] = useState<any | null>(null);
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<Suggestion | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(mockChatMessages);
+    const [newSuggestionTitle, setNewSuggestionTitle] = useState('');
+    const [newSuggestionDescription, setNewSuggestionDescription] = useState('');
+    const [editSuggestionTitle, setEditSuggestionTitle] = useState('');
+    const [editSuggestionDescription, setEditSuggestionDescription] = useState('');
+    const [suggestions, setSuggestions] = useState<Suggestion[]>(mockSuggestions);
 
-  const handleSuggestionClick = (suggestion: any) => {
+  const handleSuggestionClick = (suggestion: Suggestion) => {
     setSelectedSuggestion(suggestion);
     setOpenDialog(true);
   };
@@ -85,6 +99,54 @@ const AI: React.FC = () => {
     setOpenDialog(false);
     setSelectedSuggestion(null);
   };
+
+    const handleEditDialogClose = () => {
+        setOpenEditDialog(false);
+        setSelectedSuggestion(null);
+    };
+
+  const handleAddSuggestionOpen = () => {
+    setOpenAddDialog(true);
+  };
+
+    const handleAddSuggestionClose = () => {
+        setOpenAddDialog(false);
+        resetAddSuggestionForm();
+    };
+
+    const resetAddSuggestionForm = () => {
+        setNewSuggestionTitle('');
+        setNewSuggestionDescription('');
+    };
+
+    const handleAddSuggestionSubmit = () => {
+        const newSuggestion: Suggestion = {
+            id: suggestions.length + 1,
+            title: newSuggestionTitle,
+            description: newSuggestionDescription,
+        };
+        setSuggestions([...suggestions, newSuggestion]);
+        handleAddSuggestionClose();
+    };
+
+    const handleEditSuggestionOpen = (suggestion: Suggestion) => {
+        setSelectedSuggestion(suggestion);
+        setEditSuggestionTitle(suggestion.title);
+        setEditSuggestionDescription(suggestion.description);
+        setOpenEditDialog(true);
+    };
+
+    const handleEditSuggestionSubmit = () => {
+        if (selectedSuggestion) {
+            const updatedSuggestion = {
+                ...selectedSuggestion,
+                title: editSuggestionTitle,
+                description: editSuggestionDescription,
+            };
+            setSuggestions(suggestions.map(suggestion => suggestion.id === selectedSuggestion.id ? updatedSuggestion : suggestion));
+            handleEditDialogClose();
+        }
+    };
 
   const handleSendMessage = () => {
     if (newMessage.trim() !== '') {
@@ -111,18 +173,21 @@ const AI: React.FC = () => {
   };
 
   const handleAddSuggestion = () => {
-    // Handle add suggestion logic here
-    console.log('Add suggestion');
+      handleAddSuggestionOpen();
   };
 
   const handleEditSuggestion = () => {
-    // Handle edit suggestion logic here
-    console.log('Edit suggestion');
+      if (selectedSuggestion) {
+          handleEditSuggestionOpen(selectedSuggestion);
+      }
   };
 
   const handleDeleteSuggestion = () => {
-    // Handle delete suggestion logic here
-    console.log('Delete suggestion');
+      if (selectedSuggestion) {
+          const updatedSuggestions = suggestions.filter(suggestion => suggestion.id !== selectedSuggestion.id);
+          setSuggestions(updatedSuggestions);
+          handleDialogClose();
+      }
   };
 
   return (
@@ -232,7 +297,7 @@ const AI: React.FC = () => {
                 <Lightbulb color="primary" />
               </Box>
               <List>
-                {mockSuggestions.map((suggestion) => (
+                {suggestions.map((suggestion) => (
                   <ListItem
                     key={suggestion.id}
                     button
@@ -284,6 +349,64 @@ const AI: React.FC = () => {
           </>
         )}
       </Dialog>
+
+        {/* Add Suggestion Dialog */}
+        <Dialog open={openAddDialog} onClose={handleAddSuggestionClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Add New Suggestion</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Suggestion Title"
+                    margin="normal"
+                    value={newSuggestionTitle}
+                    onChange={(e) => setNewSuggestionTitle(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Suggestion Description"
+                    margin="normal"
+                    multiline
+                    rows={3}
+                    value={newSuggestionDescription}
+                    onChange={(e) => setNewSuggestionDescription(e.target.value)}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleAddSuggestionClose}>Cancel</Button>
+                <Button onClick={handleAddSuggestionSubmit} variant="contained" color="primary">
+                    Add Suggestion
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Edit Suggestion Dialog */}
+        <Dialog open={openEditDialog} onClose={handleEditDialogClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Edit Suggestion</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Suggestion Title"
+                    margin="normal"
+                    value={editSuggestionTitle}
+                    onChange={(e) => setEditSuggestionTitle(e.target.value)}
+                />
+                <TextField
+                    fullWidth
+                    label="Suggestion Description"
+                    margin="normal"
+                    multiline
+                    rows={3}
+                    value={editSuggestionDescription}
+                    onChange={(e) => setEditSuggestionDescription(e.target.value)}
+                />
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleEditDialogClose}>Cancel</Button>
+                <Button onClick={handleEditSuggestionSubmit} variant="contained" color="primary">
+                    Save Changes
+                </Button>
+            </DialogActions>
+        </Dialog>
     </Container>
   );
 };

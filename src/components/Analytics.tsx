@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Container,
@@ -41,7 +41,7 @@ ChartJS.register(
   Legend
 );
 
-const mockEngagementData = {
+const initialEngagementData = {
   labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
   datasets: [
     {
@@ -79,6 +79,25 @@ const mockPredictiveData = [
 ];
 
 const Analytics: React.FC = () => {
+    const [engagementData, setEngagementData] = useState(initialEngagementData);
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setEngagementData(prevData => {
+                const newData = { ...prevData };
+                newData.datasets = prevData.datasets.map(dataset => {
+                    return {
+                        ...dataset,
+                        data: dataset.data.map(value => value + Math.floor(Math.random() * 5) - 2),
+                    };
+                });
+                return newData;
+            });
+        }, 5000);
+
+        return () => clearInterval(interval);
+    }, []);
+
   return (
     <Container maxWidth="lg">
       <Box sx={{ mb: 4 }}>
@@ -105,7 +124,7 @@ const Analytics: React.FC = () => {
                 <Typography variant="h6">Client Engagement</Typography>
                 <Timeline color="primary" />
               </Box>
-              <Bar data={mockEngagementData} />
+              <Bar data={engagementData} />
             </CardContent>
           </Card>
         </Grid>

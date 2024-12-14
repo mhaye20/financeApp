@@ -11,6 +11,14 @@ import {
   ListItemText,
   ListItemIcon,
   Divider,
+    Button,
+    IconButton,
+    Tooltip,
+    FormControl,
+    FormLabel,
+    FormGroup,
+    FormControlLabel,
+    Switch,
 } from '@mui/material';
 import {
   Security,
@@ -18,7 +26,27 @@ import {
   Policy,
   Lock,
   AssignmentTurnedIn,
+    Description,
+    Add,
 } from '@mui/icons-material';
+
+const mockComplianceDocuments = [
+    {
+        id: 1,
+        name: 'GDPR Compliance Policy',
+        url: 'https://example.com/gdpr-policy.pdf',
+    },
+    {
+        id: 2,
+        name: 'SEC Compliance Report',
+        url: 'https://example.com/sec-report.pdf',
+    },
+    {
+        id: 3,
+        name: 'FINRA Compliance Guidelines',
+        url: 'https://example.com/finra-guidelines.pdf',
+    },
+];
 
 const Compliance: React.FC = () => {
   return (
@@ -101,6 +129,85 @@ const Compliance: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+          <Grid item xs={12}>
+              <Card>
+                  <CardContent>
+                      <Box
+                          sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              mb: 2,
+                          }}
+                      >
+                          <Typography variant="h6">Compliance Documents</Typography>
+                          <Button
+                              variant="contained"
+                              startIcon={<Add />}
+                          >
+                              Add Document
+                          </Button>
+                      </Box>
+                      <List>
+                          {mockComplianceDocuments.map((doc) => (
+                              <ListItem
+                                  key={doc.id}
+                                  secondaryAction={
+                                      <Tooltip title="View Document">
+                                          <IconButton
+                                              edge="end"
+                                              aria-label="view"
+                                              onClick={() => window.open(doc.url, '_blank')}
+                                          >
+                                              <Description />
+                                          </IconButton>
+                                      </Tooltip>
+                                  }
+                              >
+                                  <ListItemText
+                                      primary={doc.name}
+                                  />
+                              </ListItem>
+                          ))}
+                      </List>
+                  </CardContent>
+              </Card>
+          </Grid>
+
+          <Grid item xs={12}>
+              <Card>
+                  <CardContent>
+                      <Box
+                          sx={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              mb: 2,
+                          }}
+                      >
+                          <Typography variant="h6">Security Settings</Typography>
+                          <Security color="primary" />
+                      </Box>
+                      <FormControl component="fieldset" variant="standard">
+                          <FormGroup>
+                              <FormControlLabel
+                                  control={<Switch />}
+                                  label="Enable Two-Factor Authentication"
+                              />
+                              <FormControlLabel
+                                  control={<Switch />}
+                                  label="Enable Session Timeout"
+                              />
+                              <FormControlLabel
+                                  control={<Switch />}
+                                  label="Enable Data Encryption at Rest"
+                              />
+                          </FormGroup>
+                      </FormControl>
+                  </CardContent>
+              </Card>
+          </Grid>
       </Grid>
     </Container>
   );

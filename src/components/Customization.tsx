@@ -66,6 +66,12 @@ interface ThemeSettings {
   darkMode: boolean;
 }
 
+interface Template {
+    id: number;
+    name: string;
+    type: 'newsletter' | 'report';
+}
+
 const initialThemeSettings: ThemeSettings = {
   primaryColor: '#1976d2',
   secondaryColor: '#9c27b0',
@@ -74,61 +80,144 @@ const initialThemeSettings: ThemeSettings = {
   darkMode: false,
 };
 
-const Customization: React.FC = () => {
+const mockTemplates: Template[] = [
+    {
+        id: 1,
+        name: 'Newsletter',
+        type: 'newsletter',
+    },
+    {
+        id: 2,
+        name: 'Report',
+        type: 'report',
+    },
+];
+
+interface CustomizationProps {
+    darkMode: boolean;
+    setDarkMode: (darkMode: boolean) => void;
+}
+
+const Customization: React.FC<CustomizationProps> = ({ darkMode, setDarkMode }) => {
   const [themeSettings, setThemeSettings] = useState(initialThemeSettings);
   const [openDialog, setOpenDialog] = useState(false);
+    const [openAddTemplateDialog, setOpenAddTemplateDialog] = useState(false);
+    const [openEditTemplateDialog, setOpenEditTemplateDialog] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+				const [newTemplateName, setNewTemplateName] = useState('');
+    const [newTemplateType, setNewTemplateType] = useState<'newsletter' | 'report'>('newsletter');
+    const [editTemplateName, setEditTemplateName] = useState('');
+    const [editTemplateType, setEditTemplateType] = useState<'newsletter' | 'report'>('newsletter');
+    const [templates, setTemplates] = useState<Template[]>(mockTemplates);
 
   const handleThemeChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+				event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
     key: keyof ThemeSettings
   ) => {
     setThemeSettings({ ...themeSettings, [key]: event.target.value });
   };
 
   const handleSliderChange = (
-    event: Event,
+				event: Event,
     newValue: number | number[]
   ) => {
     setThemeSettings({ ...themeSettings, borderRadius: newValue as number });
   };
 
   const handleToggleChange = (
-    event: React.ChangeEvent<HTMLInputElement>,
-    key: keyof ThemeSettings
+				event: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    setThemeSettings({ ...themeSettings, [key]: event.target.checked });
+    setDarkMode(event.target.checked);
   };
 
   const handleFontChange = (
-    event: SelectChangeEvent<string>,
+				event: SelectChangeEvent<string>,
   ) => {
     setThemeSettings({ ...themeSettings, fontFamily: event.target.value });
   };
 
-  const handleTemplateClick = (template: string) => {
+		const handleTemplateClick = (template: string) => {
     setSelectedTemplate(template);
     setOpenDialog(true);
   };
 
-  const handleDialogClose = () => {
+		const handleDialogClose = () => {
     setOpenDialog(false);
     setSelectedTemplate(null);
   };
 
+    const handleEditTemplateOpen = (template: Template) => {
+        setSelectedTemplate(template.name);
+								setEditTemplateName(template.name);
+        setEditTemplateType(template.type);
+        setOpenEditTemplateDialog(true);
+    };
+
+				const handleEditTemplateClose = () => {
+        setOpenEditTemplateDialog(false);
+        setSelectedTemplate(null);
+    };
+
+    const handleEditTemplateSubmit = () => {
+        if (selectedTemplate) {
+            const updatedTemplates = templates.map(template => {
+                if (template.name === selectedTemplate) {
+                    return {
+                        ...template,
+                        name: editTemplateName,
+                        type: editTemplateType,
+                    };
+                }
+                return template;
+            });
+												setTemplates(updatedTemplates);
+            handleEditTemplateClose();
+        }
+    };
+
+    const handleAddTemplateOpen = () => {
+        setOpenAddTemplateDialog(true);
+    };
+
+				const handleAddTemplateClose = () => {
+        setOpenAddTemplateDialog(false);
+        resetAddTemplateForm();
+    };
+
+				const resetAddTemplateForm = () => {
+        setNewTemplateName('');
+        setNewTemplateType('newsletter');
+    };
+
+    const handleAddTemplateSubmit = () => {
+        const newTemplate: Template = {
+            id: templates.length + 1,
+            name: newTemplateName,
+            type: newTemplateType,
+								};
+        setTemplates([...templates, newTemplate]);
+        handleAddTemplateClose();
+    };
+
   const handleAddTemplate = () => {
-    // Handle add template logic here
-    console.log('Add template');
+      handleAddTemplateOpen();
   };
 
   const handleEditTemplate = () => {
-    // Handle edit template logic here
-    console.log('Edit template');
+      if (selectedTemplate) {
+          const template = templates.find(template => template.name === selectedTemplate);
+          if (template) {
+														handleEditTemplateOpen(template);
+          }
+      }
   };
 
   const handleDeleteTemplate = () => {
-    // Handle delete template logic here
-    console.log('Delete template');
+      if (selectedTemplate) {
+          const updatedTemplates = templates.filter(template => template.name !== selectedTemplate);
+										setTemplates(updatedTemplates);
+          handleDialogClose();
+      }
   };
 
   return (
@@ -137,7 +226,7 @@ const Customization: React.FC = () => {
         <Typography variant="h4" component="h1" gutterBottom>
           Customization & Branding
         </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+								<Typography variant="subtitle1" color="text.secondary">
           Personalize the app with your brand and style
         </Typography>
       </Box>
@@ -205,15 +294,15 @@ const Customization: React.FC = () => {
                     <FormControlLabel
                       control={
                         <Switch
-                          checked={themeSettings.darkMode}
-                          onChange={(e) => handleToggleChange(e, 'darkMode')}
+                          checked={darkMode}
+                          onChange={handleToggleChange}
                         />
                       }
                       label="Dark Mode"
                     />
                   </FormGroup>
                 </Grid>
-              </Grid>
+														</Grid>
             </CardContent>
           </Card>
         </Grid>
@@ -239,54 +328,33 @@ const Customization: React.FC = () => {
                 </Button>
               </Box>
               <Grid container spacing={2}>
-                <Grid item xs={12} sm={6}>
-                  <Card
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      p: 2,
-                      bgcolor: 'background.paper',
-                      borderRadius: 2,
-                      boxShadow: 1,
-                      gap: 1,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        transition: 'transform 0.3s ease-in-out',
-                      },
-                    }}
-                    onClick={() => handleTemplateClick('Newsletter')}
-                  >
-                    <Brush color="primary" />
-                    <Typography variant="body1">Newsletter</Typography>
-                  </Card>
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <Card
-                    sx={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      p: 2,
-                      bgcolor: 'background.paper',
-                      borderRadius: 2,
-                      boxShadow: 1,
-                      gap: 1,
-                      cursor: 'pointer',
-                      '&:hover': {
-                        transform: 'translateY(-4px)',
-                        transition: 'transform 0.3s ease-in-out',
-                      },
-                    }}
-                    onClick={() => handleTemplateClick('Report')}
-                  >
-                    <Image color="primary" />
-                    <Typography variant="body1">Report</Typography>
-                  </Card>
-                </Grid>
+                {templates.map((template) => (
+                    <Grid item xs={12} sm={6} key={template.id}>
+                        <Card
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                p: 2,
+                                bgcolor: 'background.paper',
+                                borderRadius: 2,
+                                boxShadow: 1,
+                                gap: 1,
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    transform: 'translateY(-4px)',
+                                    transition: 'transform 0.3s ease-in-out',
+                                },
+                            }}
+                            onClick={() => handleTemplateClick(template.name)}
+                        >
+                            {template.type === 'newsletter' ? <Brush color="primary" /> : <Image color="primary" />}
+                            <Typography variant="body1">{template.name}</Typography>
+                        </Card>
+                    </Grid>
+                ))}
               </Grid>
-            </CardContent>
+												</CardContent>
           </Card>
         </Grid>
       </Grid>
@@ -314,12 +382,74 @@ const Customization: React.FC = () => {
               <Button variant="outlined" color="error" startIcon={<Delete />} onClick={handleDeleteTemplate}>
                 Delete
               </Button>
-            </DialogActions>
+												</DialogActions>
           </>
         )}
       </Dialog>
-    </Container>
-  );
+
+        {/* Add Template Dialog */}
+        <Dialog open={openAddTemplateDialog} onClose={handleAddTemplateClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Add New Template</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Template Name"
+                    margin="normal"
+                    value={newTemplateName}
+                    onChange={(e) => setNewTemplateName(e.target.value)}
+                />
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Template Type</InputLabel>
+                    <Select
+                        value={newTemplateType}
+                        onChange={(e) => setNewTemplateType(e.target.value as 'newsletter' | 'report')}
+                        label="Template Type"
+                    >
+                        <MenuItem value="newsletter">Newsletter</MenuItem>
+                        <MenuItem value="report">Report</MenuItem>
+                    </Select>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleAddTemplateClose}>Cancel</Button>
+                <Button onClick={handleAddTemplateSubmit} variant="contained" color="primary">
+																				Add Template
+                </Button>
+            </DialogActions>
+        </Dialog>
+
+        {/* Edit Template Dialog */}
+        <Dialog open={openEditTemplateDialog} onClose={handleEditTemplateClose} maxWidth="sm" fullWidth>
+            <DialogTitle>Edit Template</DialogTitle>
+            <DialogContent>
+                <TextField
+                    fullWidth
+                    label="Template Name"
+                    margin="normal"
+                    value={editTemplateName}
+                    onChange={(e) => setEditTemplateName(e.target.value)}
+                />
+                <FormControl fullWidth margin="normal">
+                    <InputLabel>Template Type</InputLabel>
+                    <Select
+                        value={editTemplateType}
+                        onChange={(e) => setEditTemplateType(e.target.value as 'newsletter' | 'report')}
+                        label="Template Type"
+                    >
+                        <MenuItem value="newsletter">Newsletter</MenuItem>
+                        <MenuItem value="report">Report</MenuItem>
+                    </Select>
+                </FormControl>
+            </DialogContent>
+            <DialogActions>
+                <Button onClick={handleEditTemplateClose}>Cancel</Button>
+                <Button onClick={handleEditTemplateSubmit} variant="contained" color="primary">
+                    Save Changes
+                </Button>
+												</DialogActions>
+								</Dialog>
+				</Container>
+		);
 };
 
 export default Customization;
